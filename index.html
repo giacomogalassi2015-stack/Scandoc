@@ -20,11 +20,10 @@
         .btn { margin-top: 15px; padding: 15px 25px; font-size: 16px; font-weight: bold; color: white; background-color: #0056b3; border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 300px; transition: background 0.3s; }
         .btn:disabled { background-color: #ccc; cursor: not-allowed; }
         .btn-success { background-color: #28a745; }
-        .btn-police { background-color: #1a237e; } /* Blu Polizia */
+        .btn-police { background-color: #1a237e; } 
         
         #status-bar { margin-top: 20px; padding: 10px; background: #fff3cd; color: #856404; border-radius: 5px; font-weight: bold; width: 100%; max-width: 600px; text-align: center; display: none;}
         
-        /* Form dei risultati e gestione soggiorno */
         #data-container { margin-top: 20px; width: 100%; max-width: 600px; display: none; }
         .panel { padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .panel h3 { margin-top:0; color:#333; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.1rem; }
@@ -36,6 +35,7 @@
         .form-row .form-group { flex: 1; min-width: 140px; }
         
         .export-section { background-color: #e8eaf6; border: 1px solid #c5cae9; }
+        .note { font-size: 0.8rem; color: #777; margin-top: -3px; display: block; }
     </style>
 </head>
 <body>
@@ -59,14 +59,43 @@
     <div id="data-container">
         <div class="panel">
             <h3>Dati Documento</h3>
+            
             <div class="form-row">
-                <div class="form-group"><label>Nome</label><input type="text" id="in-nome"></div>
                 <div class="form-group"><label>Cognome</label><input type="text" id="in-cognome"></div>
+                <div class="form-group"><label>Nome</label><input type="text" id="in-nome"></div>
             </div>
+            
             <div class="form-row">
-                <div class="form-group"><label>Sesso</label><input type="text" id="in-sesso" placeholder="M/F"></div>
+                <div class="form-group"><label>Sesso (M/F)</label><input type="text" id="in-sesso" placeholder="M o F"></div>
                 <div class="form-group"><label>Data di Nascita</label><input type="text" id="in-data-nascita" placeholder="GG/MM/AAAA"></div>
             </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Luogo Nascita (Comune)</label>
+                    <span class="note">Per il test usa il codice ISTAT</span>
+                    <input type="text" id="in-luogo-nascita" value="412058091">
+                </div>
+                <div class="form-group">
+                    <label>Provincia Nascita</label>
+                    <span class="note">Sigla 2 lettere</span>
+                    <input type="text" id="in-prov-nascita" value="RM" maxlength="2">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Cittadinanza</label>
+                    <span class="note">Codice ISTAT (es. 100000100)</span>
+                    <input type="text" id="in-cittadinanza" value="100000100">
+                </div>
+                <div class="form-group">
+                    <label>Luogo Rilascio (Comune)</label>
+                    <span class="note">Codice ISTAT Questura/Comune</span>
+                    <input type="text" id="in-luogo-rilascio" value="412058091">
+                </div>
+            </div>
+
             <div class="form-row">
                 <div class="form-group"><label>Tipo Documento</label><input type="text" id="in-tipo-doc" value="IDENT"></div>
                 <div class="form-group"><label>N. Documento</label><input type="text" id="in-num-doc"></div>
@@ -105,7 +134,6 @@
     </div>
 
     <script>
-        // Imposta Data Odierna
         document.getElementById('in-data-arrivo').valueAsDate = new Date();
 
         const video = document.getElementById('video');
@@ -120,7 +148,6 @@
         let imageFront = null;
         let imageBack = null;
 
-        // 1. Fotocamera
         btnStart.addEventListener('click', async () => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } });
@@ -128,7 +155,7 @@
                 btnStart.style.display = 'none';
                 btnFront.style.display = 'block';
                 showStatus("Fotocamera pronta. Inquadra il FRONTE.");
-            } catch (err) { showStatus("Errore fotocamera."); }
+            } catch (err) { showStatus("Errore fotocamera. Assicurati di aver dato i permessi."); }
         });
 
         btnFront.addEventListener('click', () => {
@@ -159,7 +186,6 @@
             statusBar.textContent = msg;
         }
 
-        // 2. OCR (Semplificato per l'esempio)
         async function analizzaDocumentoCompleto() {
             try {
                 const { data: { text: textBack } } = await Tesseract.recognize(imageBack, 'eng', { tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<' });
@@ -167,9 +193,10 @@
                 const mrzLines = textBack.toUpperCase().replace(/\s/g, '').match(mrzRegex);
 
                 if (mrzLines && mrzLines.length >= 2) {
+                    const tipoDocEstratto = mrzLines[0].substring(0, 2).replace(/</g, '');
                     const numDoc = mrzLines[0].substring(5, 14).replace(/</g, '');
                     const dataNascitaRaw = mrzLines[1].substring(0, 6);
-                    const sesso = mrzLines[1].substring(7, 8) === 'F' ? 'F' : 'M'; // Forza M o F
+                    const sesso = mrzLines[1].substring(7, 8) === 'F' ? 'F' : 'M'; 
                     
                     let cognome = "", nome = "";
                     if(mrzLines.length >= 3) {
@@ -192,11 +219,17 @@
                     document.getElementById('in-sesso').value = sesso;
                     document.getElementById('in-data-nascita').value = formattaData(dataNascitaRaw);
                     document.getElementById('in-num-doc').value = numDoc;
+                    
+                    if(tipoDocEstratto === 'CA' || tipoDocEstratto === 'C' || tipoDocEstratto === 'ID') {
+                        document.getElementById('in-tipo-doc').value = 'IDENT';
+                    } else if (tipoDocEstratto === 'P') {
+                        document.getElementById('in-tipo-doc').value = 'PASAP';
+                    }
                 } else {
                     showStatus("MRZ non letto. Inserisci i dati manualmente.");
                 }
 
-                showStatus("Lettura completata.");
+                showStatus("Lettura completata. Controlla i dati.");
                 document.getElementById('video-container').style.display = 'none';
                 instructionText.style.display = 'none';
                 dataContainer.style.display = 'block';
@@ -204,14 +237,11 @@
             } catch (error) { showStatus("Errore OCR."); }
         }
 
-        // --- 3. GENERAZIONE TRACCIATO ALLOGGIATI WEB ---
-        
-        // Funzione per riempire la stringa con spazi bianchi ("pad") come richiesto dalla Polizia
+        // Funzione per riempire la stringa con spazi bianchi ("pad")
         function padString(str, length) {
             return (str || '').toString().toUpperCase().padEnd(length, ' ').substring(0, length);
         }
 
-        // Funzione per formattare la data da YYYY-MM-DD (del form HTML) a DD/MM/YYYY
         function formattaDataArrivo(dataIso) {
             if(!dataIso) return padString("", 10);
             const parti = dataIso.split('-');
@@ -219,39 +249,36 @@
         }
 
         document.getElementById('btn-export').addEventListener('click', () => {
-            // Raccogliamo i dati dal modulo
-            const tipoOspite = document.getElementById('in-tipo-ospite').value; // Es: "16" (2 caratteri)
-            const dataArrivo = formattaDataArrivo(document.getElementById('in-data-arrivo').value); // Es: "19/02/2026" (10 caratteri)
-            const giorni = document.getElementById('in-giorni').value.padStart(2, '0').substring(0,2); // Es: "01" (2 caratteri)
-            const cognome = padString(document.getElementById('in-cognome').value, 50); // 50 caratteri
-            const nome = padString(document.getElementById('in-nome').value, 30); // 30 caratteri
-            const sesso = document.getElementById('in-sesso').value.toUpperCase() === 'F' ? '2' : '1'; // 1 carattere (1 = M, 2 = F)
-            const dataNascita = padString(document.getElementById('in-data-nascita').value, 10); // 10 caratteri
+            const tipoOspite = document.getElementById('in-tipo-ospite').value; 
+            const dataArrivo = formattaDataArrivo(document.getElementById('in-data-arrivo').value); 
+            const giorni = document.getElementById('in-giorni').value.padStart(2, '0').substring(0,2); 
+            const cognome = padString(document.getElementById('in-cognome').value, 50); 
+            const nome = padString(document.getElementById('in-nome').value, 30); 
+            const sesso = document.getElementById('in-sesso').value.toUpperCase() === 'F' ? '2' : '1'; 
+            const dataNascita = padString(document.getElementById('in-data-nascita').value, 10); 
             
-            // DATI FITTIZI IN ATTESA DELLE TABELLE ISTAT (basati sul tuo esempio)
-            const comuneNascita = padString("412058091", 9); 
-            const provNascita = padString("RM", 2);
-            const statoNascita = padString("100000100", 9); 
-            const cittadinanza = padString("100000100", 9); 
+            // Prendiamo i dati direttamente dai nuovi campi
+            const comuneNascita = padString(document.getElementById('in-luogo-nascita').value, 9); 
+            const provNascita = padString(document.getElementById('in-prov-nascita').value, 2);
+            const statoNascita = padString("100000100", 9); // Fissato a Italia per il tracciato
+            const cittadinanza = padString(document.getElementById('in-cittadinanza').value, 9); 
             
-            const tipoDoc = padString(document.getElementById('in-tipo-doc').value, 5); // 5 caratteri (es. IDENT)
-            const numDoc = padString(document.getElementById('in-num-doc').value, 20); // 20 caratteri
-            const luogoRilascio = padString("412058091", 9); // Dati fittizi
+            const tipoDoc = padString(document.getElementById('in-tipo-doc').value, 5); 
+            const numDoc = padString(document.getElementById('in-num-doc').value, 20); 
+            const luogoRilascio = padString(document.getElementById('in-luogo-rilascio').value, 9); 
 
-            // Componiamo la stringa finale esatta (168 caratteri)
+            // Composizione riga esatta a 168 caratteri
             const rigaTracciato = tipoOspite + dataArrivo + giorni + cognome + nome + sesso + dataNascita + comuneNascita + provNascita + statoNascita + cittadinanza + tipoDoc + numDoc + luogoRilascio;
 
-            // Piccolo check di sicurezza: deve essere 168
             if (rigaTracciato.length !== 168) {
-                console.error("Errore: la riga è lunga " + rigaTracciato.length + " invece di 168 caratteri.");
+                alert("Attenzione: la riga generata non è di 168 caratteri! Lunghezza attuale: " + rigaTracciato.length);
+                return;
             }
 
-            // Generazione del File
             const blob = new Blob([rigaTracciato + "\r\n"], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            // Nominativo file standard per comodità
             a.download = `alloggiati_${new Date().getTime()}.txt`;
             document.body.appendChild(a);
             a.click();
