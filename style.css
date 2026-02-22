@@ -5,10 +5,10 @@ h2 { margin-top: 5px; font-size: 1.2rem; }
 /* Il mirino verde per il fallback manuale AGGIORNATO */
 #mirino { 
     position: absolute; 
-    top: 55%; 
-    left: 2.5%; 
-    width: 95%; 
-    height: 20%; 
+    top: 50%; 
+    left: 15%; 
+    width: 70%; 
+    height: 30%; 
     border: 3px dashed #00ff00; 
     box-sizing: border-box; 
     pointer-events: none; 
