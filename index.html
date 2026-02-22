@@ -144,7 +144,14 @@
 
             // 5. LETTURA OCR (Solo sul pezzettino ritagliato)
             try {
-                const { data: { text } } = await Tesseract.recognize(imageData, 'eng');
+             // Diciamo a Tesseract di cercare SOLO questi caratteri esatti
+const { data: { text } } = await Tesseract.recognize(
+    imageData, 
+    'eng',
+    {
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<'
+    }
+);
                 console.log("Testo grezzo dal ritaglio:\n", text);
 
                 // Pulizia e Regex per trovare le 3 righe da ~30 caratteri
