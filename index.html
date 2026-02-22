@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Completo Documenti e Registrazione Ospiti</title>
+    <title>Scanner e Generatore File Alloggiati Web</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f4f7f6; padding: 20px; margin: 0; }
         h2 { color: #333; margin-bottom: 5px; text-align: center; }
@@ -21,7 +20,7 @@
         .btn { margin-top: 15px; padding: 15px 25px; font-size: 16px; font-weight: bold; color: white; background-color: #0056b3; border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 300px; transition: background 0.3s; }
         .btn:disabled { background-color: #ccc; cursor: not-allowed; }
         .btn-success { background-color: #28a745; }
-        .btn-danger { background-color: #dc3545; }
+        .btn-police { background-color: #1a237e; } /* Blu Polizia */
         
         #status-bar { margin-top: 20px; padding: 10px; background: #fff3cd; color: #856404; border-radius: 5px; font-weight: bold; width: 100%; max-width: 600px; text-align: center; display: none;}
         
@@ -36,12 +35,12 @@
         .form-row { display: flex; gap: 15px; flex-wrap: wrap; }
         .form-row .form-group { flex: 1; min-width: 140px; }
         
-        .export-section { background-color: #e9ecef; border: 1px solid #ced4da; }
+        .export-section { background-color: #e8eaf6; border: 1px solid #c5cae9; }
     </style>
 </head>
 <body>
 
-    <h2>Registrazione Ospiti</h2>
+    <h2>Registrazione Alloggiati</h2>
     <p class="instructions" id="instruction-text">Fase 1: Preparati a fotografare il <strong>FRONTE</strong> del documento.</p>
 
     <div id="video-container">
@@ -59,7 +58,7 @@
 
     <div id="data-container">
         <div class="panel">
-            <h3>Dati Documento (Verifica e Correggi)</h3>
+            <h3>Dati Documento</h3>
             <div class="form-row">
                 <div class="form-group"><label>Nome</label><input type="text" id="in-nome"></div>
                 <div class="form-group"><label>Cognome</label><input type="text" id="in-cognome"></div>
@@ -68,14 +67,9 @@
                 <div class="form-group"><label>Sesso</label><input type="text" id="in-sesso" placeholder="M/F"></div>
                 <div class="form-group"><label>Data di Nascita</label><input type="text" id="in-data-nascita" placeholder="GG/MM/AAAA"></div>
             </div>
-            <div class="form-group"><label>Luogo Nascita (Comune e Prov.)</label><input type="text" id="in-luogo-nascita" placeholder="Inserisci manualmente se mancante"></div>
             <div class="form-row">
-                <div class="form-group"><label>Tipo Documento</label><input type="text" id="in-tipo-doc"></div>
+                <div class="form-group"><label>Tipo Documento</label><input type="text" id="in-tipo-doc" value="IDENT"></div>
                 <div class="form-group"><label>N. Documento</label><input type="text" id="in-num-doc"></div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label>Cittadinanza</label><input type="text" id="in-cittadinanza" value="Italia"></div>
-                <div class="form-group"><label>Luogo Rilascio</label><input type="text" id="in-luogo-rilascio" placeholder="Comune o Questura"></div>
             </div>
         </div>
 
@@ -85,16 +79,16 @@
                 <div class="form-group">
                     <label>Tipo Ospite</label>
                     <select id="in-tipo-ospite">
-                        <option value="Ospite Singolo">Ospite Singolo</option>
-                        <option value="Capo Famiglia">Capo Famiglia</option>
-                        <option value="Capo Gruppo">Capo Gruppo</option>
-                        <option value="Familiare">Familiare</option>
-                        <option value="Membro Gruppo">Membro Gruppo</option>
+                        <option value="16">16 - Ospite Singolo</option>
+                        <option value="17">17 - Capo Famiglia</option>
+                        <option value="18">18 - Capo Gruppo</option>
+                        <option value="19">19 - Familiare</option>
+                        <option value="20">20 - Membro Gruppo</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Permanenza (Giorni)</label>
-                    <input type="number" id="in-giorni" value="1" min="1" max="365">
+                    <input type="number" id="in-giorni" value="1" min="1" max="30">
                 </div>
             </div>
             <div class="form-group">
@@ -104,18 +98,14 @@
         </div>
 
         <div class="panel export-section">
-            <h3>Salvataggio Sicuro (Cifrato)</h3>
-            <p style="font-size: 0.85rem; color: #555;">Imposta una password per proteggere il file. Ti servirà per aprirlo in futuro.</p>
-            <div class="form-group">
-                <label>Password Crittografia</label>
-                <input type="password" id="in-password" placeholder="Inserisci una password sicura">
-            </div>
-            <button id="btn-export" class="btn btn-danger" style="width: 100%; max-width: none;">🔒 Esporta File Cifrato (.txt)</button>
+            <h3 style="color: #1a237e;">Esportazione Alloggiati Web</h3>
+            <p style="font-size: 0.85rem; color: #555;">Genera il file testuale (.txt) da caricare sul portale della Polizia di Stato.</p>
+            <button id="btn-export" class="btn btn-police" style="width: 100%; max-width: none;">📄 Scarica File Alloggiati</button>
         </div>
     </div>
 
     <script>
-        // Inizializza la data di arrivo a oggi
+        // Imposta Data Odierna
         document.getElementById('in-data-arrivo').valueAsDate = new Date();
 
         const video = document.getElementById('video');
@@ -130,26 +120,22 @@
         let imageFront = null;
         let imageBack = null;
 
-        // 1. Gestione Fotocamera e Scatti
+        // 1. Fotocamera
         btnStart.addEventListener('click', async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } 
-                });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } });
                 video.srcObject = stream;
                 btnStart.style.display = 'none';
                 btnFront.style.display = 'block';
                 showStatus("Fotocamera pronta. Inquadra il FRONTE.");
-            } catch (err) {
-                showStatus("Errore fotocamera. Ricarica e consenti l'accesso.");
-            }
+            } catch (err) { showStatus("Errore fotocamera."); }
         });
 
         btnFront.addEventListener('click', () => {
             imageFront = captureFrame();
             btnFront.style.display = 'none';
             btnBack.style.display = 'block';
-            instructionText.innerHTML = "Fase 2: Gira il documento e fotografa il <strong>RETRO</strong> (dove ci sono le freccette <<<).";
+            instructionText.innerHTML = "Fase 2: inquadra il <strong>RETRO</strong> (con le freccette <<<).";
             showStatus("Fronte acquisito. Ora inquadra il RETRO.");
         });
 
@@ -157,15 +143,14 @@
             imageBack = captureFrame();
             btnBack.disabled = true;
             video.pause(); 
-            showStatus("Elaborazione intelligenza artificiale in corso... Attendi.");
+            showStatus("Lettura OCR in corso... Attendi.");
             await analizzaDocumentoCompleto();
         });
 
         function captureFrame() {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
             return canvas.toDataURL('image/jpeg', 1.0);
         }
 
@@ -174,125 +159,104 @@
             statusBar.textContent = msg;
         }
 
-        // 2. Motore OCR (Fronte/Retro e Whitelist)
+        // 2. OCR (Semplificato per l'esempio)
         async function analizzaDocumentoCompleto() {
             try {
-                // Analisi MRZ (Retro)
-                const { data: { text: textBack } } = await Tesseract.recognize(imageBack, 'eng', {
-                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<'
-                });
-                
+                const { data: { text: textBack } } = await Tesseract.recognize(imageBack, 'eng', { tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<' });
                 const mrzRegex = /[A-Z0-9<]{28,35}/g;
                 const mrzLines = textBack.toUpperCase().replace(/\s/g, '').match(mrzRegex);
 
                 if (mrzLines && mrzLines.length >= 2) {
-                    popolaDatiMRZ(mrzLines);
-                } else {
-                    showStatus("MRZ non letto bene. Puoi compilare i dati manualmente qui sotto.");
-                }
-
-                // Tentativo Analisi Fronte (Luogo rilascio)
-                showStatus("Leggendo i dati dal fronte...");
-                const { data: { text: textFront } } = await Tesseract.recognize(imageFront, 'ita');
-                const frontLines = textFront.split('\n');
-                let probabileComune = "";
-                for(let line of frontLines) {
-                    if(line.toUpperCase().includes('COMUNE') || line.toUpperCase().includes('SINDACO')) {
-                        probabileComune = line.replace(/comune/i, '').replace(/di/i, '').trim();
-                        break;
+                    const numDoc = mrzLines[0].substring(5, 14).replace(/</g, '');
+                    const dataNascitaRaw = mrzLines[1].substring(0, 6);
+                    const sesso = mrzLines[1].substring(7, 8) === 'F' ? 'F' : 'M'; // Forza M o F
+                    
+                    let cognome = "", nome = "";
+                    if(mrzLines.length >= 3) {
+                        const nomiRaw = mrzLines[2].split('<<');
+                        cognome = nomiRaw[0] ? nomiRaw[0].replace(/</g, ' ').trim() : "";
+                        nome = nomiRaw[1] ? nomiRaw[1].replace(/</g, ' ').trim() : "";
                     }
-                }
-                if(probabileComune) document.getElementById('in-luogo-rilascio').value = probabileComune;
 
-                // Mostra Modulo
-                showStatus("Lettura completata. Verifica ed eventualmente correggi i dati.");
+                    const formattaData = (yymmdd) => {
+                        if(!/^\d{6}$/.test(yymmdd)) return ""; 
+                        let year = parseInt(yymmdd.substring(0, 2));
+                        const month = yymmdd.substring(2, 4);
+                        const day = yymmdd.substring(4, 6);
+                        year = year > 24 ? 1900 + year : 2000 + year; 
+                        return `${day}/${month}/${year}`;
+                    };
+
+                    document.getElementById('in-cognome').value = cognome;
+                    document.getElementById('in-nome').value = nome;
+                    document.getElementById('in-sesso').value = sesso;
+                    document.getElementById('in-data-nascita').value = formattaData(dataNascitaRaw);
+                    document.getElementById('in-num-doc').value = numDoc;
+                } else {
+                    showStatus("MRZ non letto. Inserisci i dati manualmente.");
+                }
+
+                showStatus("Lettura completata.");
                 document.getElementById('video-container').style.display = 'none';
                 instructionText.style.display = 'none';
                 dataContainer.style.display = 'block';
 
-            } catch (error) {
-                showStatus("Errore durante l'elaborazione OCR.");
-            }
+            } catch (error) { showStatus("Errore OCR."); }
         }
 
-        function popolaDatiMRZ(lines) {
-            let tipoDoc = lines[0].substring(0, 2).replace(/</g, '');
-            if(tipoDoc === 'CA' || tipoDoc === 'C' || tipoDoc === 'ID') tipoDoc = "Carta d'Identità";
-            
-            const numDoc = lines[0].substring(5, 14).replace(/</g, '');
-            const dataNascitaRaw = lines[1].substring(0, 6);
-            const sesso = lines[1].substring(7, 8);
-            const nazionalita = lines[1].substring(15, 18).replace(/</g, '');
-            
-            let cognome = "", nome = "";
-            if(lines.length >= 3) {
-                const nomiRaw = lines[2].split('<<');
-                cognome = nomiRaw[0] ? nomiRaw[0].replace(/</g, ' ').trim() : "";
-                nome = nomiRaw[1] ? nomiRaw[1].replace(/</g, ' ').trim() : "";
-            }
-
-            const formattaData = (yymmdd) => {
-                if(!/^\d{6}$/.test(yymmdd)) return ""; 
-                let year = parseInt(yymmdd.substring(0, 2));
-                const month = yymmdd.substring(2, 4);
-                const day = yymmdd.substring(4, 6);
-                year = year > 24 ? 1900 + year : 2000 + year; 
-                return `${day}/${month}/${year}`;
-            };
-
-            document.getElementById('in-cognome').value = cognome;
-            document.getElementById('in-nome').value = nome;
-            document.getElementById('in-sesso').value = sesso;
-            document.getElementById('in-data-nascita').value = formattaData(dataNascitaRaw);
-            document.getElementById('in-tipo-doc').value = tipoDoc;
-            document.getElementById('in-num-doc').value = numDoc;
-            document.getElementById('in-cittadinanza').value = nazionalita === 'ITA' ? 'Italiana' : nazionalita;
+        // --- 3. GENERAZIONE TRACCIATO ALLOGGIATI WEB ---
+        
+        // Funzione per riempire la stringa con spazi bianchi ("pad") come richiesto dalla Polizia
+        function padString(str, length) {
+            return (str || '').toString().toUpperCase().padEnd(length, ' ').substring(0, length);
         }
 
-        // 3. Generazione File Cifrato e Download
+        // Funzione per formattare la data da YYYY-MM-DD (del form HTML) a DD/MM/YYYY
+        function formattaDataArrivo(dataIso) {
+            if(!dataIso) return padString("", 10);
+            const parti = dataIso.split('-');
+            return `${parti[2]}/${parti[1]}/${parti[0]}`;
+        }
+
         document.getElementById('btn-export').addEventListener('click', () => {
-            const password = document.getElementById('in-password').value;
-            if (!password) {
-                alert("Devi inserire una password per cifrare i dati prima di esportarli!");
-                return;
+            // Raccogliamo i dati dal modulo
+            const tipoOspite = document.getElementById('in-tipo-ospite').value; // Es: "16" (2 caratteri)
+            const dataArrivo = formattaDataArrivo(document.getElementById('in-data-arrivo').value); // Es: "19/02/2026" (10 caratteri)
+            const giorni = document.getElementById('in-giorni').value.padStart(2, '0').substring(0,2); // Es: "01" (2 caratteri)
+            const cognome = padString(document.getElementById('in-cognome').value, 50); // 50 caratteri
+            const nome = padString(document.getElementById('in-nome').value, 30); // 30 caratteri
+            const sesso = document.getElementById('in-sesso').value.toUpperCase() === 'F' ? '2' : '1'; // 1 carattere (1 = M, 2 = F)
+            const dataNascita = padString(document.getElementById('in-data-nascita').value, 10); // 10 caratteri
+            
+            // DATI FITTIZI IN ATTESA DELLE TABELLE ISTAT (basati sul tuo esempio)
+            const comuneNascita = padString("412058091", 9); 
+            const provNascita = padString("RM", 2);
+            const statoNascita = padString("100000100", 9); 
+            const cittadinanza = padString("100000100", 9); 
+            
+            const tipoDoc = padString(document.getElementById('in-tipo-doc').value, 5); // 5 caratteri (es. IDENT)
+            const numDoc = padString(document.getElementById('in-num-doc').value, 20); // 20 caratteri
+            const luogoRilascio = padString("412058091", 9); // Dati fittizi
+
+            // Componiamo la stringa finale esatta (168 caratteri)
+            const rigaTracciato = tipoOspite + dataArrivo + giorni + cognome + nome + sesso + dataNascita + comuneNascita + provNascita + statoNascita + cittadinanza + tipoDoc + numDoc + luogoRilascio;
+
+            // Piccolo check di sicurezza: deve essere 168
+            if (rigaTracciato.length !== 168) {
+                console.error("Errore: la riga è lunga " + rigaTracciato.length + " invece di 168 caratteri.");
             }
 
-            // Raccogliamo tutti i dati in un oggetto JSON strutturato
-            const recordOspite = {
-                dataArrivo: document.getElementById('in-data-arrivo').value,
-                giorniPermanenza: document.getElementById('in-giorni').value,
-                tipoOspite: document.getElementById('in-tipo-ospite').value,
-                nome: document.getElementById('in-nome').value,
-                cognome: document.getElementById('in-cognome').value,
-                sesso: document.getElementById('in-sesso').value,
-                dataNascita: document.getElementById('in-data-nascita').value,
-                luogoNascita: document.getElementById('in-luogo-nascita').value,
-                cittadinanza: document.getElementById('in-cittadinanza').value,
-                tipoDocumento: document.getElementById('in-tipo-doc').value,
-                numeroDocumento: document.getElementById('in-num-doc').value,
-                luogoRilascio: document.getElementById('in-luogo-rilascio').value,
-                timestampRegistrazione: new Date().toISOString()
-            };
-
-            // Trasformiamo in stringa e crittografiamo con AES
-            const jsonString = JSON.stringify(recordOspite, null, 2);
-            const cipherText = CryptoJS.AES.encrypt(jsonString, password).toString();
-
-            // Creiamo il file e lo scarichiamo
-            const cognomeOspite = recordOspite.cognome || "Sconosciuto";
-            const nomeFile = `Ospite_${cognomeOspite}_${recordOspite.dataArrivo}.aes`;
-            
-            const blob = new Blob([cipherText], { type: 'text/plain' });
+            // Generazione del File
+            const blob = new Blob([rigaTracciato + "\r\n"], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = nomeFile;
+            // Nominativo file standard per comodità
+            a.download = `alloggiati_${new Date().getTime()}.txt`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
-            alert("File salvato con successo! Ricorda la password, altrimenti i dati saranno illeggibili.");
         });
     </script>
 </body>
