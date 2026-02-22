@@ -3,214 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner MRZ Avanzato</title>
+    <title>Scanner Completo Documenti (Fronte/Retro)</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; padding: 10px; margin: 0;}
-        h2 { margin-top: 5px; font-size: 1.2rem; }
-        #video-container { position: relative; width: 100%; max-width: 640px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.2); background: #000; }
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f4f7f6; padding: 20px; margin: 0; }
+        h2 { color: #333; margin-bottom: 5px; text-align: center; }
+        .instructions { color: #666; font-size: 0.9rem; text-align: center; margin-bottom: 20px; }
+        
+        #video-container { position: relative; width: 100%; max-width: 600px; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 16px rgba(0,0,0,0.2); background: #000; }
         #video { width: 100%; display: block; object-fit: cover; }
+        #mirino { position: absolute; top: 10%; left: 5%; width: 90%; height: 80%; border: 3px solid #00ff00; border-radius: 8px; box-sizing: border-box; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); }
+        #mirino::after { content: 'Allinea il documento qui'; color: white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; opacity: 0.7; }
         
-        /* Il mirino verde per il fallback manuale */
-        #mirino { position: absolute; top: 50%; left: 10%; width: 80%; height: 25%; border: 3px dashed #00ff00; box-sizing: border-box; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4); }
+        canvas { display: none; }
         
-        /* Canvas nascosto per l'elaborazione intera */
-        #canvas { display: none; }
+        .btn { margin-top: 15px; padding: 15px 25px; font-size: 16px; font-weight: bold; color: white; background-color: #0056b3; border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 300px; transition: background 0.3s; }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        .btn-success { background-color: #28a745; }
         
-        /* Canvas visibile per mostrare all'utente cosa legge l'OCR */
-        #crop-preview { border: 2px solid blue; margin-top: 10px; max-width: 100%; background: #fff; }
+        #status-bar { margin-top: 20px; padding: 10px; background: #fff3cd; color: #856404; border-radius: 5px; font-weight: bold; width: 100%; max-width: 600px; text-align: center; }
         
-        .btn { margin-top: 15px; padding: 15px 25px; font-size: 16px; font-weight: bold; color: white; background-color: #007bff; border: none; border-radius: 8px; cursor: pointer; width: 90%; max-width: 400px;}
-        .btn:disabled { background-color: #ccc; }
-        #status { margin-top: 15px; font-weight: bold; color: #333; text-align: center; padding: 0 10px; }
-        #result { margin-top: 20px; padding: 15px; background: white; border: 1px solid #ddd; width: 90%; max-width: 600px; white-space: pre-wrap; display: none; border-radius: 8px; }
-        .help-text { font-size: 0.9rem; color: #555; text-align: center; margin-bottom: 10px; }
+        /* Form dei risultati */
+        #result-form { margin-top: 20px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 600px; display: none; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 0.9rem; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; box-sizing: border-box; }
+        .form-row { display: flex; gap: 15px; }
+        .form-row .form-group { flex: 1; }
     </style>
 </head>
 <body>
 
-    <h2>Scanner Documenti ITA</h2>
-    <p class="help-text"><strong>Consiglio:</strong> Gira il telefono in orizzontale per una lettura migliore.</p>
-    
+    <h2>Acquisizione Documento</h2>
+    <p class="instructions" id="instruction-text">Fase 1: Preparati a fotografare il <strong>FRONTE</strong> del documento.</p>
+
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
         <div id="mirino"></div>
     </div>
     
-    <canvas id="canvas"></canvas>
-    
-    <button id="start-button" class="btn">1. Accendi Fotocamera</button>
-    <button id="scan-button" class="btn" style="display:none;">2. Scatta e Analizza</button>
+    <canvas id="canvas-capture"></canvas>
 
-    <div id="status">In attesa...</div>
-    
-    <div style="text-align: center; margin-top: 10px;">
-        <p style="margin:0; font-size:12px; color:gray;" id="preview-label" style="display:none;">Immagine ritagliata per la lettura:</p>
-        <canvas id="crop-preview"></canvas>
+    <button id="btn-start" class="btn">Attiva Fotocamera</button>
+    <button id="btn-capture-front" class="btn" style="display:none;">📸 Scatta FRONTE</button>
+    <button id="btn-capture-back" class="btn btn-success" style="display:none;">📸 Scatta RETRO (MRZ)</button>
+
+    <div id="status-bar" style="display: none;"></div>
+
+    <div id="result-form">
+        <h3 style="margin-top:0; color:#333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Dati Estratti</h3>
+        
+        <div class="form-row">
+            <div class="form-group"><label>Nome</label><input type="text" id="in-nome"></div>
+            <div class="form-group"><label>Cognome</label><input type="text" id="in-cognome"></div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group"><label>Sesso</label><input type="text" id="in-sesso" placeholder="M/F"></div>
+            <div class="form-group"><label>Data di Nascita</label><input type="text" id="in-data-nascita" placeholder="GG/MM/AAAA"></div>
+        </div>
+        
+        <div class="form-group"><label>Luogo di Nascita (Comune e Prov.)</label>
+            <input type="text" id="in-luogo-nascita" placeholder="Richiede verifica manuale">
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group"><label>Tipo Documento</label><input type="text" id="in-tipo-doc"></div>
+            <div class="form-group"><label>N. Documento</label><input type="text" id="in-num-doc"></div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group"><label>Cittadinanza</label><input type="text" id="in-cittadinanza" value="Italia"></div>
+            <div class="form-group"><label>Luogo di Rilascio</label><input type="text" id="in-luogo-rilascio" placeholder="Comune di..."></div>
+        </div>
     </div>
-
-    <div id="result"></div>
 
     <script>
         const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const cropCanvas = document.getElementById('crop-preview');
-        const startBtn = document.getElementById('start-button');
-        const scanBtn = document.getElementById('scan-button');
-        const statusDiv = document.getElementById('status');
-        const resultDiv = document.getElementById('result');
-        const mirino = document.getElementById('mirino');
+        const canvas = document.getElementById('canvas-capture');
+        const btnStart = document.getElementById('btn-start');
+        const btnFront = document.getElementById('btn-capture-front');
+        const btnBack = document.getElementById('btn-capture-back');
+        const statusBar = document.getElementById('status-bar');
+        const resultForm = document.getElementById('result-form');
+        const instructionText = document.getElementById('instruction-text');
+        
+        let imageFront = null;
+        let imageBack = null;
 
-        // Impostazioni fotocamera (forziamo alta risoluzione se possibile)
-        const constraints = {
-            video: { 
-                facingMode: 'environment',
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
-            }
-        };
-
-        startBtn.addEventListener('click', async () => {
+        // 1. Avvio Fotocamera
+        btnStart.addEventListener('click', async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } 
+                });
                 video.srcObject = stream;
-                startBtn.style.display = 'none';
-                scanBtn.style.display = 'block';
-                statusDiv.textContent = "Allinea il codice a barre e le scritte nel riquadro verde.";
+                btnStart.style.display = 'none';
+                btnFront.style.display = 'block';
+                showStatus("Fotocamera pronta. Inquadra il FRONTE.");
             } catch (err) {
-                statusDiv.textContent = "Errore fotocamera. Ricarica la pagina e consenti l'accesso.";
+                showStatus("Errore fotocamera. Ricarica e consenti l'accesso.");
             }
         });
 
-        scanBtn.addEventListener('click', async () => {
-            scanBtn.disabled = true;
-            statusDiv.textContent = "Analisi in corso... attendi.";
-            resultDiv.style.display = "none";
+        // 2. Scatto Fronte
+        btnFront.addEventListener('click', () => {
+            imageFront = captureFrame();
+            btnFront.style.display = 'none';
+            btnBack.style.display = 'block';
+            instructionText.innerHTML = "Fase 2: Gira il documento e fotografa il <strong>RETRO</strong> (dove ci sono le freccette <<<).";
+            showStatus("Fronte acquisito. Ora inquadra il RETRO.");
+        });
 
-            // 1. Disegna tutto il frame video sul canvas nascosto
+        // 3. Scatto Retro e Avvio Analisi Completa
+        btnBack.addEventListener('click', async () => {
+            imageBack = captureFrame();
+            btnBack.disabled = true;
+            video.pause(); // Blocchiamo il video per far capire che stiamo elaborando
+            showStatus("Elaborazione intelligenza artificiale in corso... Attendi.");
+            
+            await analizzaDocumentoCompleto();
+        });
+
+        function captureFrame() {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 1.0);
+        }
 
-            let cropX, cropY, cropW, cropH;
-            let usaMirinoManuale = true;
+        function showStatus(msg) {
+            statusBar.style.display = 'block';
+            statusBar.textContent = msg;
+        }
 
-            // 2. TENTATIVO DI LETTURA CODICE A BARRE (Solo browser supportati come Chrome/Android)
-            if ('BarcodeDetector' in window) {
-                try {
-                    const barcodeDetector = new BarcodeDetector();
-                    const barcodes = await barcodeDetector.detect(canvas);
-                    
-                    if (barcodes.length > 0) {
-                        // Ha trovato il codice a barre! Calcoliamo l'area della banda MRZ (che sta sotto)
-                        const bc = barcodes[0].boundingBox;
-                        cropX = Math.max(0, bc.x - 20); // Un po' di margine a sinistra
-                        cropY = bc.y + bc.height;       // Partiamo ESATTAMENTE da sotto il codice a barre
-                        cropW = bc.width + 100;         // La banda MRZ è un po' più larga del barcode
-                        cropH = bc.height * 2.5;        // L'altezza della banda è circa 2.5 volte il barcode
-                        usaMirinoManuale = false;
-                        console.log("Barcode trovato come ancora!");
-                    }
-                } catch (e) {
-                    console.log("BarcodeDetector fallito, uso il mirino manuale.");
-                }
-            }
-
-            // 3. FALLBACK: Se non trova il barcode (o su iPhone), ritaglia ESATTAMENTE dove sta il mirino verde
-            if (usaMirinoManuale) {
-                // Calcoliamo le coordinate del mirino rispetto al video reale
-                const videoRatio = video.videoWidth / video.clientWidth;
-                const mirinoRect = mirino.getBoundingClientRect();
-                const videoRect = video.getBoundingClientRect();
-
-                cropX = (mirinoRect.left - videoRect.left) * videoRatio;
-                cropY = (mirinoRect.top - videoRect.top) * videoRatio;
-                cropW = mirinoRect.width * videoRatio;
-                cropH = mirinoRect.height * videoRatio;
-            }
-
-            // 4. RITAGLIA L'IMMAGINE e mostrala all'utente
-            cropCanvas.width = cropW;
-            cropCanvas.height = cropH;
-            const cropCtx = cropCanvas.getContext('2d');
-            
-            // Applichiamo un filtro di contrasto (migliora la lettura OCR)
-            cropCtx.filter = 'contrast(1.5) grayscale(1)';
-            cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-            // Converti in immagine da mandare a Tesseract
-            const imageData = cropCanvas.toDataURL('image/jpeg', 1.0);
-
-            // 5. LETTURA OCR (Solo sul pezzettino ritagliato)
+        // --- MOTORE DI ANALISI ---
+        async function analizzaDocumentoCompleto() {
             try {
-             // Diciamo a Tesseract di cercare SOLO questi caratteri esatti
-const { data: { text } } = await Tesseract.recognize(
-    imageData, 
-    'eng',
-    {
-        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<'
-    }
-);
-                console.log("Testo grezzo dal ritaglio:\n", text);
-
-                // Pulizia e Regex per trovare le 3 righe da ~30 caratteri
-                const cleanText = text.toUpperCase().replace(/\s/g, '');
+                // ANALISI RETRO (L'MRZ è la nostra fonte di verità per i dati principali)
+                // Usiamo la whitelist per non sbagliare lettere/numeri
+                const { data: { text: textBack } } = await Tesseract.recognize(imageBack, 'eng', {
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<'
+                });
+                
                 const mrzRegex = /[A-Z0-9<]{28,35}/g;
-                const mrzLines = cleanText.match(mrzRegex);
+                const mrzLines = textBack.toUpperCase().replace(/\s/g, '').match(mrzRegex);
 
-                if (mrzLines && mrzLines.length >= 3) {
-                    statusDiv.textContent = "Documento letto con successo!";
-                    analizzaMRZ(mrzLines.slice(0, 3)); 
+                if (mrzLines && mrzLines.length >= 2) {
+                    popolaDatiMRZ(mrzLines);
                 } else {
-                    statusDiv.textContent = "Lettura fallita. Controlla l'immagine blu qui sotto: il testo era nitido?";
-                    scanBtn.disabled = false;
+                    showStatus("MRZ non letto bene sul retro. Riprova l'acquisizione.");
+                    btnBack.disabled = false;
+                    video.play();
+                    return;
                 }
 
-            } catch (err) {
-                statusDiv.textContent = "Errore durante il riconoscimento OCR.";
-                scanBtn.disabled = false;
+                // ANALISI FRONTE (TENTATIVO)
+                // Usiamo l'italiano e cerchiamo di pescare Comune di Rilascio
+                // NOTA: Questo in locale sul browser è molto impreciso, serve per darti lo scheletro
+                showStatus("Leggendo i dati dal fronte...");
+                const { data: { text: textFront } } = await Tesseract.recognize(imageFront, 'ita');
+                
+                // Ricerca grezza della parola "Comune" o simili per il luogo di rilascio
+                const frontLines = textFront.split('\n');
+                let probabileComune = "";
+                for(let line of frontLines) {
+                    if(line.toUpperCase().includes('COMUNE') || line.toUpperCase().includes('SINDACO')) {
+                        probabileComune = line.replace(/comune/i, '').replace(/di/i, '').trim();
+                        break;
+                    }
+                }
+                if(probabileComune) document.getElementById('in-luogo-rilascio').value = probabileComune;
+
+                // Fine procedura
+                showStatus("Lettura completata. Verifica ed eventualmente correggi i dati.");
+                document.getElementById('video-container').style.display = 'none';
+                resultForm.style.display = 'block';
+
+            } catch (error) {
+                showStatus("Errore durante l'elaborazione OCR.");
+                console.error(error);
             }
-        });
+        }
 
-        // Funzione per mostrare i dati (Uguale a prima)
-        function analizzaMRZ(lines) {
-            try {
-                const tipoDoc = lines[0].substring(0, 2).replace(/</g, '');
-                const paese = lines[0].substring(2, 5).replace(/</g, '');
-                const numDoc = lines[0].substring(5, 14).replace(/</g, '');
-
-                const dataNascitaRaw = lines[1].substring(0, 6);
-                const sesso = lines[1].substring(7, 8);
-                const scadenzaRaw = lines[1].substring(8, 14);
-                const nazionalita = lines[1].substring(15, 18).replace(/</g, '');
-
+        function popolaDatiMRZ(lines) {
+            // Estrazione standard CIE / Passaporto (Logica perfezionata)
+            let tipoDoc = lines[0].substring(0, 2).replace(/</g, '');
+            if(tipoDoc === 'CA' || tipoDoc === 'C' || tipoDoc === 'ID') tipoDoc = "Carta d'Identità";
+            
+            const numDoc = lines[0].substring(5, 14).replace(/</g, '');
+            const dataNascitaRaw = lines[1].substring(0, 6);
+            const sesso = lines[1].substring(7, 8);
+            const nazionalita = lines[1].substring(15, 18).replace(/</g, '');
+            
+            // La linea 3 ha Cognome<<Nome
+            let cognome = "", nome = "";
+            if(lines.length >= 3) {
                 const nomiRaw = lines[2].split('<<');
-                const cognome = nomiRaw[0] ? nomiRaw[0].replace(/</g, ' ').trim() : "Non letto";
-                const nome = nomiRaw[1] ? nomiRaw[1].replace(/</g, ' ').trim() : "Non letto";
-
-                const formattaData = (yymmdd) => {
-                    if(!/^\d{6}$/.test(yymmdd)) return yymmdd; 
-                    let year = parseInt(yymmdd.substring(0, 2));
-                    const month = yymmdd.substring(2, 4);
-                    const day = yymmdd.substring(4, 6);
-                    year = year > 50 ? 1900 + year : 2000 + year; 
-                    return `${day}/${month}/${year}`;
-                };
-
-                resultDiv.innerHTML = `
-                    <h3>Dati Estratti:</h3>
-                    <strong>Cognome:</strong> ${cognome}<br>
-                    <strong>Nome:</strong> ${nome}<br>
-                    <strong>Data Nascita:</strong> ${formattaData(dataNascitaRaw)}<br>
-                    <strong>Sesso:</strong> ${sesso}<br>
-                    <strong>N. Doc:</strong> ${numDoc}
-                `;
-                resultDiv.style.display = "block";
-            } catch(e) {
-                statusDiv.textContent = "Formato MRZ non valido.";
+                cognome = nomiRaw[0] ? nomiRaw[0].replace(/</g, ' ').trim() : "";
+                nome = nomiRaw[1] ? nomiRaw[1].replace(/</g, ' ').trim() : "";
             }
-            scanBtn.disabled = false;
+
+            const formattaData = (yymmdd) => {
+                if(!/^\d{6}$/.test(yymmdd)) return ""; 
+                let year = parseInt(yymmdd.substring(0, 2));
+                const month = yymmdd.substring(2, 4);
+                const day = yymmdd.substring(4, 6);
+                year = year > 24 ? 1900 + year : 2000 + year; // Soglia anno nascita dinamica
+                return `${day}/${month}/${year}`;
+            };
+
+            // Inseriamo nei campi input
+            document.getElementById('in-cognome').value = cognome;
+            document.getElementById('in-nome').value = nome;
+            document.getElementById('in-sesso').value = sesso;
+            document.getElementById('in-data-nascita').value = formattaData(dataNascitaRaw);
+            document.getElementById('in-tipo-doc').value = tipoDoc;
+            document.getElementById('in-num-doc').value = numDoc;
+            document.getElementById('in-cittadinanza').value = nazionalita === 'ITA' ? 'Italiana' : nazionalita;
         }
     </script>
 </body>
