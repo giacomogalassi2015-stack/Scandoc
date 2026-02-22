@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Completo Documenti (Fronte/Retro)</title>
+    <title>Scanner Completo Documenti e Registrazione Ospiti</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f4f7f6; padding: 20px; margin: 0; }
         h2 { color: #333; margin-bottom: 5px; text-align: center; }
@@ -20,21 +21,27 @@
         .btn { margin-top: 15px; padding: 15px 25px; font-size: 16px; font-weight: bold; color: white; background-color: #0056b3; border: none; border-radius: 8px; cursor: pointer; width: 100%; max-width: 300px; transition: background 0.3s; }
         .btn:disabled { background-color: #ccc; cursor: not-allowed; }
         .btn-success { background-color: #28a745; }
+        .btn-danger { background-color: #dc3545; }
         
-        #status-bar { margin-top: 20px; padding: 10px; background: #fff3cd; color: #856404; border-radius: 5px; font-weight: bold; width: 100%; max-width: 600px; text-align: center; }
+        #status-bar { margin-top: 20px; padding: 10px; background: #fff3cd; color: #856404; border-radius: 5px; font-weight: bold; width: 100%; max-width: 600px; text-align: center; display: none;}
         
-        /* Form dei risultati */
-        #result-form { margin-top: 20px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 600px; display: none; }
+        /* Form dei risultati e gestione soggiorno */
+        #data-container { margin-top: 20px; width: 100%; max-width: 600px; display: none; }
+        .panel { padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .panel h3 { margin-top:0; color:#333; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 1.1rem; }
+        
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 0.9rem; }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; box-sizing: border-box; }
-        .form-row { display: flex; gap: 15px; }
-        .form-row .form-group { flex: 1; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; box-sizing: border-box; }
+        .form-row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 140px; }
+        
+        .export-section { background-color: #e9ecef; border: 1px solid #ced4da; }
     </style>
 </head>
 <body>
 
-    <h2>Acquisizione Documento</h2>
+    <h2>Registrazione Ospiti</h2>
     <p class="instructions" id="instruction-text">Fase 1: Preparati a fotografare il <strong>FRONTE</strong> del documento.</p>
 
     <div id="video-container">
@@ -48,50 +55,82 @@
     <button id="btn-capture-front" class="btn" style="display:none;">📸 Scatta FRONTE</button>
     <button id="btn-capture-back" class="btn btn-success" style="display:none;">📸 Scatta RETRO (MRZ)</button>
 
-    <div id="status-bar" style="display: none;"></div>
+    <div id="status-bar"></div>
 
-    <div id="result-form">
-        <h3 style="margin-top:0; color:#333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Dati Estratti</h3>
-        
-        <div class="form-row">
-            <div class="form-group"><label>Nome</label><input type="text" id="in-nome"></div>
-            <div class="form-group"><label>Cognome</label><input type="text" id="in-cognome"></div>
+    <div id="data-container">
+        <div class="panel">
+            <h3>Dati Documento (Verifica e Correggi)</h3>
+            <div class="form-row">
+                <div class="form-group"><label>Nome</label><input type="text" id="in-nome"></div>
+                <div class="form-group"><label>Cognome</label><input type="text" id="in-cognome"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Sesso</label><input type="text" id="in-sesso" placeholder="M/F"></div>
+                <div class="form-group"><label>Data di Nascita</label><input type="text" id="in-data-nascita" placeholder="GG/MM/AAAA"></div>
+            </div>
+            <div class="form-group"><label>Luogo Nascita (Comune e Prov.)</label><input type="text" id="in-luogo-nascita" placeholder="Inserisci manualmente se mancante"></div>
+            <div class="form-row">
+                <div class="form-group"><label>Tipo Documento</label><input type="text" id="in-tipo-doc"></div>
+                <div class="form-group"><label>N. Documento</label><input type="text" id="in-num-doc"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Cittadinanza</label><input type="text" id="in-cittadinanza" value="Italia"></div>
+                <div class="form-group"><label>Luogo Rilascio</label><input type="text" id="in-luogo-rilascio" placeholder="Comune o Questura"></div>
+            </div>
         </div>
-        
-        <div class="form-row">
-            <div class="form-group"><label>Sesso</label><input type="text" id="in-sesso" placeholder="M/F"></div>
-            <div class="form-group"><label>Data di Nascita</label><input type="text" id="in-data-nascita" placeholder="GG/MM/AAAA"></div>
+
+        <div class="panel">
+            <h3>Dati Soggiorno</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tipo Ospite</label>
+                    <select id="in-tipo-ospite">
+                        <option value="Ospite Singolo">Ospite Singolo</option>
+                        <option value="Capo Famiglia">Capo Famiglia</option>
+                        <option value="Capo Gruppo">Capo Gruppo</option>
+                        <option value="Familiare">Familiare</option>
+                        <option value="Membro Gruppo">Membro Gruppo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Permanenza (Giorni)</label>
+                    <input type="number" id="in-giorni" value="1" min="1" max="365">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Data Arrivo</label>
+                <input type="date" id="in-data-arrivo">
+            </div>
         </div>
-        
-        <div class="form-group"><label>Luogo di Nascita (Comune e Prov.)</label>
-            <input type="text" id="in-luogo-nascita" placeholder="Richiede verifica manuale">
-        </div>
-        
-        <div class="form-row">
-            <div class="form-group"><label>Tipo Documento</label><input type="text" id="in-tipo-doc"></div>
-            <div class="form-group"><label>N. Documento</label><input type="text" id="in-num-doc"></div>
-        </div>
-        
-        <div class="form-row">
-            <div class="form-group"><label>Cittadinanza</label><input type="text" id="in-cittadinanza" value="Italia"></div>
-            <div class="form-group"><label>Luogo di Rilascio</label><input type="text" id="in-luogo-rilascio" placeholder="Comune di..."></div>
+
+        <div class="panel export-section">
+            <h3>Salvataggio Sicuro (Cifrato)</h3>
+            <p style="font-size: 0.85rem; color: #555;">Imposta una password per proteggere il file. Ti servirà per aprirlo in futuro.</p>
+            <div class="form-group">
+                <label>Password Crittografia</label>
+                <input type="password" id="in-password" placeholder="Inserisci una password sicura">
+            </div>
+            <button id="btn-export" class="btn btn-danger" style="width: 100%; max-width: none;">🔒 Esporta File Cifrato (.txt)</button>
         </div>
     </div>
 
     <script>
+        // Inizializza la data di arrivo a oggi
+        document.getElementById('in-data-arrivo').valueAsDate = new Date();
+
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas-capture');
         const btnStart = document.getElementById('btn-start');
         const btnFront = document.getElementById('btn-capture-front');
         const btnBack = document.getElementById('btn-capture-back');
         const statusBar = document.getElementById('status-bar');
-        const resultForm = document.getElementById('result-form');
+        const dataContainer = document.getElementById('data-container');
         const instructionText = document.getElementById('instruction-text');
         
         let imageFront = null;
         let imageBack = null;
 
-        // 1. Avvio Fotocamera
+        // 1. Gestione Fotocamera e Scatti
         btnStart.addEventListener('click', async () => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -106,7 +145,6 @@
             }
         });
 
-        // 2. Scatto Fronte
         btnFront.addEventListener('click', () => {
             imageFront = captureFrame();
             btnFront.style.display = 'none';
@@ -115,13 +153,11 @@
             showStatus("Fronte acquisito. Ora inquadra il RETRO.");
         });
 
-        // 3. Scatto Retro e Avvio Analisi Completa
         btnBack.addEventListener('click', async () => {
             imageBack = captureFrame();
             btnBack.disabled = true;
-            video.pause(); // Blocchiamo il video per far capire che stiamo elaborando
+            video.pause(); 
             showStatus("Elaborazione intelligenza artificiale in corso... Attendi.");
-            
             await analizzaDocumentoCompleto();
         });
 
@@ -138,11 +174,10 @@
             statusBar.textContent = msg;
         }
 
-        // --- MOTORE DI ANALISI ---
+        // 2. Motore OCR (Fronte/Retro e Whitelist)
         async function analizzaDocumentoCompleto() {
             try {
-                // ANALISI RETRO (L'MRZ è la nostra fonte di verità per i dati principali)
-                // Usiamo la whitelist per non sbagliare lettere/numeri
+                // Analisi MRZ (Retro)
                 const { data: { text: textBack } } = await Tesseract.recognize(imageBack, 'eng', {
                     tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<'
                 });
@@ -153,19 +188,12 @@
                 if (mrzLines && mrzLines.length >= 2) {
                     popolaDatiMRZ(mrzLines);
                 } else {
-                    showStatus("MRZ non letto bene sul retro. Riprova l'acquisizione.");
-                    btnBack.disabled = false;
-                    video.play();
-                    return;
+                    showStatus("MRZ non letto bene. Puoi compilare i dati manualmente qui sotto.");
                 }
 
-                // ANALISI FRONTE (TENTATIVO)
-                // Usiamo l'italiano e cerchiamo di pescare Comune di Rilascio
-                // NOTA: Questo in locale sul browser è molto impreciso, serve per darti lo scheletro
+                // Tentativo Analisi Fronte (Luogo rilascio)
                 showStatus("Leggendo i dati dal fronte...");
                 const { data: { text: textFront } } = await Tesseract.recognize(imageFront, 'ita');
-                
-                // Ricerca grezza della parola "Comune" o simili per il luogo di rilascio
                 const frontLines = textFront.split('\n');
                 let probabileComune = "";
                 for(let line of frontLines) {
@@ -176,19 +204,18 @@
                 }
                 if(probabileComune) document.getElementById('in-luogo-rilascio').value = probabileComune;
 
-                // Fine procedura
+                // Mostra Modulo
                 showStatus("Lettura completata. Verifica ed eventualmente correggi i dati.");
                 document.getElementById('video-container').style.display = 'none';
-                resultForm.style.display = 'block';
+                instructionText.style.display = 'none';
+                dataContainer.style.display = 'block';
 
             } catch (error) {
                 showStatus("Errore durante l'elaborazione OCR.");
-                console.error(error);
             }
         }
 
         function popolaDatiMRZ(lines) {
-            // Estrazione standard CIE / Passaporto (Logica perfezionata)
             let tipoDoc = lines[0].substring(0, 2).replace(/</g, '');
             if(tipoDoc === 'CA' || tipoDoc === 'C' || tipoDoc === 'ID') tipoDoc = "Carta d'Identità";
             
@@ -197,7 +224,6 @@
             const sesso = lines[1].substring(7, 8);
             const nazionalita = lines[1].substring(15, 18).replace(/</g, '');
             
-            // La linea 3 ha Cognome<<Nome
             let cognome = "", nome = "";
             if(lines.length >= 3) {
                 const nomiRaw = lines[2].split('<<');
@@ -210,11 +236,10 @@
                 let year = parseInt(yymmdd.substring(0, 2));
                 const month = yymmdd.substring(2, 4);
                 const day = yymmdd.substring(4, 6);
-                year = year > 24 ? 1900 + year : 2000 + year; // Soglia anno nascita dinamica
+                year = year > 24 ? 1900 + year : 2000 + year; 
                 return `${day}/${month}/${year}`;
             };
 
-            // Inseriamo nei campi input
             document.getElementById('in-cognome').value = cognome;
             document.getElementById('in-nome').value = nome;
             document.getElementById('in-sesso').value = sesso;
@@ -223,6 +248,52 @@
             document.getElementById('in-num-doc').value = numDoc;
             document.getElementById('in-cittadinanza').value = nazionalita === 'ITA' ? 'Italiana' : nazionalita;
         }
+
+        // 3. Generazione File Cifrato e Download
+        document.getElementById('btn-export').addEventListener('click', () => {
+            const password = document.getElementById('in-password').value;
+            if (!password) {
+                alert("Devi inserire una password per cifrare i dati prima di esportarli!");
+                return;
+            }
+
+            // Raccogliamo tutti i dati in un oggetto JSON strutturato
+            const recordOspite = {
+                dataArrivo: document.getElementById('in-data-arrivo').value,
+                giorniPermanenza: document.getElementById('in-giorni').value,
+                tipoOspite: document.getElementById('in-tipo-ospite').value,
+                nome: document.getElementById('in-nome').value,
+                cognome: document.getElementById('in-cognome').value,
+                sesso: document.getElementById('in-sesso').value,
+                dataNascita: document.getElementById('in-data-nascita').value,
+                luogoNascita: document.getElementById('in-luogo-nascita').value,
+                cittadinanza: document.getElementById('in-cittadinanza').value,
+                tipoDocumento: document.getElementById('in-tipo-doc').value,
+                numeroDocumento: document.getElementById('in-num-doc').value,
+                luogoRilascio: document.getElementById('in-luogo-rilascio').value,
+                timestampRegistrazione: new Date().toISOString()
+            };
+
+            // Trasformiamo in stringa e crittografiamo con AES
+            const jsonString = JSON.stringify(recordOspite, null, 2);
+            const cipherText = CryptoJS.AES.encrypt(jsonString, password).toString();
+
+            // Creiamo il file e lo scarichiamo
+            const cognomeOspite = recordOspite.cognome || "Sconosciuto";
+            const nomeFile = `Ospite_${cognomeOspite}_${recordOspite.dataArrivo}.aes`;
+            
+            const blob = new Blob([cipherText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = nomeFile;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert("File salvato con successo! Ricorda la password, altrimenti i dati saranno illeggibili.");
+        });
     </script>
 </body>
 </html>
