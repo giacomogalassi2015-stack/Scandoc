@@ -70,25 +70,30 @@
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imageData = canvas.toDataURL('image/jpeg');
 
-            try {
+           try {
                 // Avvia Tesseract per leggere l'immagine
                 const { data: { text } } = await Tesseract.recognize(imageData, 'eng');
                 
-                // Cerca le righe MRZ (stringhe lunghe 30 caratteri con lettere, numeri o '<')
-                // Le CIE italiane hanno 3 righe da 30 caratteri
-                const mrzRegex = /[A-Z0-9<]{30}/g;
-                const mrzLines = text.match(mrzRegex);
+                console.log("TESTO GREZZO LETTO:\n", text); // Premi F12 o apri la console per vedere cosa legge davvero!
 
+                // 1. Pulizia: Togliamo tutti gli spazi vuoti e forziamo il maiuscolo
+                const cleanText = text.toUpperCase().replace(/\s/g, '');
+                
+                // 2. Regex più morbida: cerchiamo righe tra 28 e 35 caratteri (invece di esattamente 30)
+                const mrzRegex = /[A-Z0-9<]{28,35}/g;
+                const mrzLines = cleanText.match(mrzRegex);
+
+                // Le CIE italiane hanno 3 righe. Se ne trova almeno 3, procediamo.
                 if (mrzLines && mrzLines.length >= 3) {
                     statusDiv.textContent = "Documento letto con successo!";
-                    analizzaMRZ(mrzLines.slice(0, 3)); // Prendi le prime 3 righe valide
+                    analizzaMRZ(mrzLines.slice(0, 3)); 
                 } else {
-                    statusDiv.textContent = "Non riesco a leggere bene il codice. Riprova, assicurati che sia a fuoco.";
+                    statusDiv.textContent = "Codice non chiaro. Avvicinati di più e riprova.";
                     scanBtn.disabled = false;
                 }
 
             } catch (err) {
-                statusDiv.textContent = "Errore durante il riconoscimento del testo.";
+                statusDiv.textContent = "Errore durante il riconoscimento OCR.";
                 scanBtn.disabled = false;
             }
         });
