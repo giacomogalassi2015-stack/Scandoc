@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner MRZ Modulare</title>
+    <title>Scanner ICAO Pro</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
-    <h2>Scanner Documenti</h2>
+    <h2>Scanner MRTD (Alloggiati)</h2>
     <p class="help-text">Gira il telefono in orizzontale.</p>
     
     <div id="video-container">
@@ -22,7 +22,7 @@
     <button id="start-button" class="btn">1. Accendi Fotocamera</button>
     <div style="display: flex; gap: 10px; width: 90%; max-width: 400px; justify-content: center;">
         <button id="scan-button" class="btn" style="display:none; width: 50%;">2. Scatta</button>
-        <button id="download-button" class="btn" style="display:none; width: 50%; background-color: #28a745;">3. Scarica TXT</button>
+        <button id="download-button" class="btn btn-success" style="display:none; width: 50%;">3. Scarica TXT</button>
     </div>
 
     <div id="status">In attesa...</div>
@@ -34,8 +34,6 @@
     <div id="result"></div>
 
     <script src="estrai_carta_identita.js"></script>
-    <script src="estrai_passaporto.js"></script>
-    <script src="estrai_patente.js"></script>
     <script src="gestione_output.js"></script>
     <script src="lettore_generale.js"></script>
 </body>

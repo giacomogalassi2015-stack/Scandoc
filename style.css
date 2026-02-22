@@ -1,137 +1,21 @@
-/* style.css */
-body { 
-    font-family: Arial, sans-serif; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    background-color: #f0f2f5; 
-    padding: 10px; 
-    margin: 0;
-}
+body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; padding: 10px; margin: 0; }
+h2 { margin-top: 5px; font-size: 1.2rem; }
+#video-container { position: relative; width: 100%; max-width: 640px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.2); background: #000; }
+#video { width: 100%; display: block; object-fit: cover; }
+#mirino { position: absolute; top: 50%; left: 10%; width: 80%; height: 25%; border: 3px dashed #00ff00; box-sizing: border-box; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4); }
+#canvas { display: none; }
+#crop-preview { border: 2px solid blue; margin-top: 10px; max-width: 100%; background: #fff; }
 
-h2 { 
-    margin-top: 5px; 
-    font-size: 1.2rem; 
-}
+.btn { margin-top: 15px; padding: 15px 25px; font-size: 16px; font-weight: bold; color: white; background-color: #007bff; border: none; border-radius: 8px; cursor: pointer; width: 90%; max-width: 400px; }
+.btn:disabled { background-color: #ccc; }
+.btn-success { background-color: #28a745; }
+#status { margin-top: 15px; font-weight: bold; color: #333; text-align: center; padding: 0 10px; }
+#result { margin-top: 20px; padding: 15px; background: white; border: 1px solid #ddd; width: 90%; max-width: 600px; display: none; border-radius: 8px; box-sizing: border-box;}
+.help-text { font-size: 0.9rem; color: #555; text-align: center; margin-bottom: 10px; }
 
-#video-container { 
-    position: relative; 
-    width: 100%; 
-    max-width: 640px; 
-    border-radius: 8px; 
-    overflow: hidden; 
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
-    background: #000; 
-}
-
-#video { 
-    width: 100%; 
-    display: block; 
-    object-fit: cover; 
-}
-
-/* Il mirino verde per l'inquadratura */
-#mirino { 
-    position: absolute; 
-    top: 50%; 
-    left: 10%; 
-    width: 80%; 
-    height: 25%; 
-    border: 3px dashed #00ff00; 
-    box-sizing: border-box; 
-    pointer-events: none; 
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4); 
-}
-
-#canvas { 
-    display: none; 
-}
-
-#crop-preview { 
-    border: 2px solid blue; 
-    margin-top: 10px; 
-    max-width: 100%; 
-    background: #fff; 
-}
-
-.btn { 
-    margin-top: 15px; 
-    padding: 15px 25px; 
-    font-size: 16px; 
-    font-weight: bold; 
-    color: white; 
-    background-color: #007bff; 
-    border: none; 
-    border-radius: 8px; 
-    cursor: pointer; 
-    width: 90%; 
-    max-width: 400px;
-}
-
-.btn:disabled { 
-    background-color: #ccc; 
-}
-
-#status { 
-    margin-top: 15px; 
-    font-weight: bold; 
-    color: #333; 
-    text-align: center; 
-    padding: 0 10px; 
-}
-
-#result { 
-    margin-top: 20px; 
-    padding: 15px; 
-    background: white; 
-    border: 1px solid #ddd; 
-    width: 90%; 
-    max-width: 600px; 
-    white-space: pre-wrap; 
-    display: none; 
-    border-radius: 8px; 
-}
-
-.help-text { 
-    font-size: 0.9rem; 
-    color: #555; 
-    text-align: center; 
-    margin-bottom: 10px; 
-}
-
-/* --- NUOVI STILI PER IL MODULO MODIFICABILE --- */
-.form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 15px;
-    text-align: left;
-}
-
-.form-group label {
-    font-size: 14px;
-    font-weight: bold;
-    color: #555;
-    margin-bottom: 5px;
-}
-
-.form-group input, .form-group select {
-    padding: 10px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.form-group input:focus, .form-group select:focus {
-    border-color: #007bff;
-    outline: none;
-    box-shadow: 0 0 5px rgba(0,123,255,0.5);
-}
-
-hr {
-    border: 0;
-    height: 1px;
-    background: #ddd;
-    margin: 20px 0;
-}
+/* Stili per il Form Editabile */
+.form-group { display: flex; flex-direction: column; margin-bottom: 15px; text-align: left; }
+.form-group label { font-size: 14px; font-weight: bold; color: #555; margin-bottom: 5px; }
+.form-group input, .form-group select { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; }
+.form-group input:focus, .form-group select:focus { border-color: #007bff; outline: none; box-shadow: 0 0 5px rgba(0,123,255,0.5); }
+hr { border: 0; height: 1px; background: #ddd; margin: 20px 0; }

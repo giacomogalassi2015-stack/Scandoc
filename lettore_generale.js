@@ -1,5 +1,3 @@
-// lettore_generale.js
-
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const cropCanvas = document.getElementById('crop-preview');
@@ -18,7 +16,7 @@ startBtn.addEventListener('click', async () => {
         video.srcObject = stream;
         startBtn.style.display = 'none';
         scanBtn.style.display = 'block';
-        statusDiv.textContent = "Allinea il documento nel riquadro e scatta.";
+        statusDiv.textContent = "Allinea la banda in basso (MRZ) nel riquadro verde e scatta.";
     } catch (err) {
         statusDiv.textContent = "Errore fotocamera.";
     }
@@ -27,7 +25,7 @@ startBtn.addEventListener('click', async () => {
 scanBtn.addEventListener('click', async () => {
     scanBtn.disabled = true;
     downloadBtn.style.display = "none";
-    statusDiv.textContent = "Analisi OCR in corso...";
+    statusDiv.textContent = "Analisi OCR in corso... attendi.";
     resultDiv.style.display = "none";
 
     canvas.width = video.videoWidth;
@@ -72,6 +70,7 @@ scanBtn.addEventListener('click', async () => {
     const imageData = cropCanvas.toDataURL('image/jpeg', 1.0);
 
     try {
+        // WHITELIST ATTIVA: L'OCR leggerà SOLO i caratteri validi per l'MRZ
         const { data: { text } } = await Tesseract.recognize(
             imageData, 
             'eng',
@@ -79,31 +78,14 @@ scanBtn.addEventListener('click', async () => {
         );
 
         const cleanText = text.toUpperCase().replace(/\s/g, '');
-        const mrzRegex = /[A-Z0-9<]{28,45}/g; // Tolleranza estesa per eventuali passaporti futuri
+        const mrzRegex = /[A-Z0-9<]{28,45}/g; 
         const mrzLines = cleanText.match(mrzRegex);
 
-        if (mrzLines && mrzLines.length > 0) {
-            
-            // --- LOGICA DI SMISTAMENTO (ROUTING) ---
-            const primoCarattere = mrzLines[0].charAt(0);
-            let datiProcessati = null;
-
-            if (primoCarattere === 'P') {
-                // E' un passaporto!
-                datiProcessati = estraiDatiPassaporto(mrzLines);
-            } else if (primoCarattere === 'I' || primoCarattere === 'A' || primoCarattere === 'C') {
-                // E' una Carta di Identità Europea (ID Card)
-                datiProcessati = estraiDatiCIE(mrzLines);
-            } else {
-                // Se non capisce cos'è, prova a forzare le patenti (che non usano MRZ, ma per ora lo lasciamo come fallback)
-                datiProcessati = estraiDatiPatente(text);
-            }
-
-            // Mostriamo i risultati tramite il file gestione_output.js
+        if (mrzLines && mrzLines.length >= 3) {
+            let datiProcessati = estraiDatiCIE(mrzLines.slice(0, 3));
             mostraRisultati(datiProcessati);
-
         } else {
-            statusDiv.textContent = "Testo non trovato o formato errato. Riprova.";
+            statusDiv.textContent = "Testo non trovato o formato errato. Riprova stringendo l'inquadratura.";
         }
     } catch (err) {
         statusDiv.textContent = "Errore OCR.";
