@@ -22,10 +22,24 @@ startBtn.addEventListener('click', async () => {
     }
 });
 
+// Funzione avanzata: Binarizzazione (Bianco e Nero assoluto per uccidere le ombre)
+function applicaBinarizzazione(ctx, width, height) {
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+        // Calcola la luminosità del pixel
+        const luminosita = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+        // Se è scuro diventa nero (testo), se è chiaro diventa bianco (sfondo)
+        const colore = luminosita < 130 ? 0 : 255; 
+        data[i] = data[i+1] = data[i+2] = colore; // Applica a R, G, B
+    }
+    ctx.putImageData(imageData, 0, 0);
+}
+
 scanBtn.addEventListener('click', async () => {
     scanBtn.disabled = true;
     downloadBtn.style.display = "none";
-    statusDiv.textContent = "Analisi OCR in corso... attendi.";
+    statusDiv.textContent = "Elaborazione immagine e OCR in corso...";
     resultDiv.style.display = "none";
 
     canvas.width = video.videoWidth;
@@ -63,18 +77,25 @@ scanBtn.addEventListener('click', async () => {
 
     cropCanvas.width = cropW;
     cropCanvas.height = cropH;
-    const cropCtx = cropCanvas.getContext('2d');
-    cropCtx.filter = 'contrast(1.5) grayscale(1)';
+    const cropCtx = cropCanvas.getContext('2d', { willReadFrequently: true });
+    
+    // Disegniamo il ritaglio normale
     cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+    
+    // Applichiamo la magia: trasformiamo in Bianco e Nero puro
+    applicaBinarizzazione(cropCtx, cropW, cropH);
 
     const imageData = cropCanvas.toDataURL('image/jpeg', 1.0);
 
     try {
-        // WHITELIST ATTIVA: L'OCR leggerà SOLO i caratteri validi per l'MRZ
+        // OCR POTENZIATO: Whitelist + Modalità Blocco Singolo (PSM 6)
         const { data: { text } } = await Tesseract.recognize(
             imageData, 
             'eng',
-            { tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<' }
+            { 
+                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<',
+                tessedit_pageseg_mode: '6' // Forza Tesseract a non cercare paragrafi o colonne strane
+            }
         );
 
         const cleanText = text.toUpperCase().replace(/\s/g, '');
@@ -82,10 +103,10 @@ scanBtn.addEventListener('click', async () => {
         const mrzLines = cleanText.match(mrzRegex);
 
         if (mrzLines && mrzLines.length >= 3) {
-            let datiProcessati = estraiDatiCIE(mrzLines.slice(0, 3));
+            let datiProcessati = estraiDatiCIE(mrzLines);
             mostraRisultati(datiProcessati);
         } else {
-            statusDiv.textContent = "Testo non trovato o formato errato. Riprova stringendo l'inquadratura.";
+            statusDiv.textContent = "Testo non trovato o sfocato. Cerca di evitare riflessi sulla plastica.";
         }
     } catch (err) {
         statusDiv.textContent = "Errore OCR.";

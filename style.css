@@ -2,7 +2,18 @@ body { font-family: Arial, sans-serif; display: flex; flex-direction: column; al
 h2 { margin-top: 5px; font-size: 1.2rem; }
 #video-container { position: relative; width: 100%; max-width: 640px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.2); background: #000; }
 #video { width: 100%; display: block; object-fit: cover; }
-#mirino { position: absolute; top: 50%; left: 10%; width: 80%; height: 25%; border: 3px dashed #00ff00; box-sizing: border-box; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4); }
+/* Il mirino verde per il fallback manuale AGGIORNATO */
+#mirino { 
+    position: absolute; 
+    top: 55%; 
+    left: 2.5%; 
+    width: 95%; 
+    height: 20%; 
+    border: 3px dashed #00ff00; 
+    box-sizing: border-box; 
+    pointer-events: none; 
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); 
+}
 #canvas { display: none; }
 #crop-preview { border: 2px solid blue; margin-top: 10px; max-width: 100%; background: #fff; }
 
