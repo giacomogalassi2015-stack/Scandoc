@@ -3,148 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lettore MRZ Reale</title>
+    <title>Scanner Schedina Alloggiati</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; padding: 20px; }
-        #video-container { position: relative; width: 100%; max-width: 600px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; padding: 20px; margin: 0; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 600px; margin-bottom: 20px; box-sizing: border-box; }
+        
+        /* Controlli Input Soggiorno */
+        .form-group { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        select, input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+        
+        #video-container { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: black; }
         #video { width: 100%; display: block; }
-        /* Mirino per aiutare l'utente */
-        #mirino { position: absolute; top: 60%; left: 10%; width: 80%; height: 30%; border: 3px solid red; box-sizing: border-box; pointer-events: none; }
+        /* Il mirino copre dal 60% in altezza e lascia un 10% di margine ai lati */
+        #mirino { position: absolute; top: 60%; left: 10%; width: 80%; height: 30%; border: 3px dashed #00ff00; box-sizing: border-box; pointer-events: none; }
+        
         #canvas { display: none; }
-        .btn { margin-top: 15px; padding: 12px 24px; font-size: 16px; color: white; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; }
-        .btn:disabled { background-color: #ccc; }
-        #status { margin-top: 15px; font-weight: bold; color: #333; }
-        #result { margin-top: 20px; padding: 15px; background: white; border: 1px solid #ddd; width: 100%; max-width: 600px; white-space: pre-wrap; display: none; }
+        
+        .btn-container { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+        .btn { flex: 1; padding: 12px 20px; font-size: 16px; color: white; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; text-align: center; }
+        .btn-success { background-color: #28a745; }
+        .btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        
+        #status { margin-top: 15px; font-weight: bold; color: #333; text-align: center; }
+        #result { margin-top: 20px; padding: 15px; background: #e9ecef; border: 1px solid #ddd; border-radius: 5px; display: none; word-break: break-word; }
     </style>
 </head>
 <body>
 
-    <h1>Lettore Documenti ITA</h1>
-    <div id="video-container">
-        <video id="video" autoplay playsinline></video>
-        <div id="mirino"></div>
-    </div>
-    
-    <canvas id="canvas"></canvas>
-    
-    <div>
-        <button id="start-button" class="btn">1. Accendi Fotocamera</button>
-        <button id="scan-button" class="btn" disabled>2. Scatta e Analizza</button>
+    <div class="card">
+        <h2>Dati Soggiorno</h2>
+        <div class="form-group">
+            <label for="tipo-ospite">Ruolo Ospite:</label>
+            <select id="tipo-ospite">
+                <option value="Ospite singolo">Ospite singolo</option>
+                <option value="Capo gruppo">Capo gruppo</option>
+                <option value="Capo famiglia">Capo famiglia</option>
+                <option value="Famigliare">Famigliare</option>
+                <option value="Accompagnatore">Accompagnatore</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="num-giorni">Numero di giorni:</label>
+            <input type="number" id="num-giorni" min="1" value="1">
+        </div>
     </div>
 
-    <div id="status">In attesa...</div>
-    <div id="result"></div>
+    <div class="card">
+        <h2>Scanner Documento</h2>
+        <div id="video-container">
+            <video id="video" autoplay playsinline></video>
+            <div id="mirino"></div>
+        </div>
+        
+        <canvas id="canvas"></canvas>
+        
+        <div class="btn-container">
+            <button id="start-button" class="btn">1. Accendi Fotocamera</button>
+            <button id="scan-button" class="btn" disabled>2. Scatta e Analizza</button>
+            <button id="download-button" class="btn btn-success" style="display: none;">3. Scarica TXT</button>
+        </div>
+
+        <div id="status">In attesa...</div>
+        <div id="result"></div>
+    </div>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const startBtn = document.getElementById('start-button');
         const scanBtn = document.getElementById('scan-button');
+        const downloadBtn = document.getElementById('download-button');
         const statusDiv = document.getElementById('status');
         const resultDiv = document.getElementById('result');
+        
+        // Input Soggiorno
+        const tipoOspiteInput = document.getElementById('tipo-ospite');
+        const numGiorniInput = document.getElementById('num-giorni');
+
+        let testoScaricabile = ""; // Variabile globale per salvare i dati da mettere nel TXT
+        let nomeFileDaScaricare = "schedina_ospite.txt";
 
         // 1. Avvio Fotocamera
         startBtn.addEventListener('click', async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 } } });
                 video.srcObject = stream;
-                startBtn.style.display = 'none'; // Nascondi il pulsante di avvio
-                scanBtn.disabled = false;        // Attiva il pulsante di scatto
-                statusDiv.textContent = "Inquadra le 3 righe con le freccette (<<<) nel riquadro rosso e premi Scatta.";
+                startBtn.style.display = 'none'; 
+                scanBtn.disabled = false;        
+                statusDiv.innerHTML = "Inquadra le 3 righe (<<<) nel riquadro verde e premi <strong>Scatta e Analizza</strong>.";
             } catch (err) {
-                statusDiv.textContent = "Errore fotocamera: Verifica i permessi.";
+                statusDiv.textContent = "Errore fotocamera: Verifica i permessi del browser.";
             }
         });
 
-        // 2. Scatto e Lettura OCR
+        // 2. Scatto, Ritaglio (Crop) e Lettura OCR
         scanBtn.addEventListener('click', async () => {
             scanBtn.disabled = true;
-            statusDiv.textContent = "Lettura in corso... tieni fermo il documento.";
+            downloadBtn.style.display = 'none';
+            statusDiv.textContent = "Elaborazione in corso... tieni fermo il documento.";
             resultDiv.style.display = "none";
 
-            // Imposta canvas come il video
+            // Disegniamo il frame completo
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const context = canvas.getContext('2d');
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/jpeg');
 
-           try {
-                // Avvia Tesseract per leggere l'immagine
-                const { data: { text } } = await Tesseract.recognize(imageData, 'eng');
+            // IL TRUCCO: Ritagliamo SOLO la parte corrispondente al mirino verde
+            // Il mirino è a left: 10%, top: 60%, width: 80%, height: 30%
+            const cropX = canvas.width * 0.10;
+            const cropY = canvas.height * 0.60;
+            const cropW = canvas.width * 0.80;
+            const cropH = canvas.height * 0.30;
+
+            const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = cropW;
+            cropCanvas.height = cropH;
+            const cropCtx = cropCanvas.getContext('2d');
+            
+            // Disegniamo sul nuovo canvas ritagliato
+            cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+            
+            // Passiamo a Tesseract SOLO il rettangolino ritagliato (molto più veloce e preciso)
+            const imageData = cropCanvas.toDataURL('image/jpeg');
+
+            try {
+                // Forziamo Tesseract a riconoscere solo lettere maiuscole, numeri e '<' per ridurre errori
+                const { data: { text } } = await Tesseract.recognize(imageData, 'eng', {
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<'
+                });
                 
-                console.log("TESTO GREZZO LETTO:\n", text); // Premi F12 o apri la console per vedere cosa legge davvero!
-
-                // 1. Pulizia: Togliamo tutti gli spazi vuoti e forziamo il maiuscolo
+                // Pulizia del testo e Regex
                 const cleanText = text.toUpperCase().replace(/\s/g, '');
-                
-                // 2. Regex più morbida: cerchiamo righe tra 28 e 35 caratteri (invece di esattamente 30)
                 const mrzRegex = /[A-Z0-9<]{28,35}/g;
                 const mrzLines = cleanText.match(mrzRegex);
 
-                // Le CIE italiane hanno 3 righe. Se ne trova almeno 3, procediamo.
                 if (mrzLines && mrzLines.length >= 3) {
                     statusDiv.textContent = "Documento letto con successo!";
                     analizzaMRZ(mrzLines.slice(0, 3)); 
                 } else {
-                    statusDiv.textContent = "Codice non chiaro. Avvicinati di più e riprova.";
+                    statusDiv.textContent = "Codice non letto bene o incompleto. Assicurati che il codice sia tutto dentro il riquadro verde.";
                     scanBtn.disabled = false;
                 }
 
             } catch (err) {
-                statusDiv.textContent = "Errore durante il riconoscimento OCR.";
+                statusDiv.textContent = "Errore OCR. Riprova.";
                 scanBtn.disabled = false;
             }
         });
 
-        // 3. Estrazione dei dati dalle 3 righe trovate
+        // 3. Estrazione dei dati e preparazione del file di testo
         function analizzaMRZ(lines) {
             try {
-                // Linea 1: Tipo, Paese, Numero Documento
                 const tipoDoc = lines[0].substring(0, 2).replace(/</g, '');
                 const paese = lines[0].substring(2, 5).replace(/</g, '');
                 const numDoc = lines[0].substring(5, 14).replace(/</g, '');
 
-                // Linea 2: Data Nascita, Sesso, Scadenza, Nazionalità
                 const dataNascitaRaw = lines[1].substring(0, 6);
                 const sesso = lines[1].substring(7, 8);
                 const scadenzaRaw = lines[1].substring(8, 14);
                 const nazionalita = lines[1].substring(15, 18).replace(/</g, '');
 
-                // Linea 3: Cognome e Nome
                 const nomiRaw = lines[2].split('<<');
-                const cognome = nomiRaw[0] ? nomiRaw[0].replace(/</g, ' ').trim() : "Non letto";
-                const nome = nomiRaw[1] ? nomiRaw[1].replace(/</g, ' ').trim() : "Non letto";
+                const cognome = nomiRaw[0] ? nomiRaw[0].replace(/</g, ' ').trim() : "IGNOTO";
+                let nome = nomiRaw[1] ? nomiRaw[1].replace(/</g, ' ').trim() : "IGNOTO";
+                
+                // Pulizia extra per il nome se finisce con K o L dovute ad errori sui <<<
+                nome = nome.replace(/[KL]+$/g, '').trim(); 
 
-                // Funzione per formattare la data (AAMMGG -> GG/MM/AAAA)
                 const formattaData = (yymmdd) => {
-                    if(!/^\d{6}$/.test(yymmdd)) return yymmdd; // Se non sono numeri, restituisci grezzo
+                    if(!/^\d{6}$/.test(yymmdd)) return yymmdd;
                     let year = parseInt(yymmdd.substring(0, 2));
                     const month = yymmdd.substring(2, 4);
                     const day = yymmdd.substring(4, 6);
-                    year = year > 50 ? 1900 + year : 2000 + year; // Logica secolo base
+                    year = year > 30 ? 1900 + year : 2000 + year; // Soglia anno aggiornata
                     return `${day}/${month}/${year}`;
                 };
 
-                // Mostra i risultati
+                const dataNascita = formattaData(dataNascitaRaw);
+                const dataScadenza = formattaData(scadenzaRaw);
+                const tipoOspite = tipoOspiteInput.value;
+                const numGiorni = numGiorniInput.value;
+
+                // Creiamo la stringa formattata per il file di testo
+                testoScaricabile = `--- SCHEDA ALLOGGIATO ---\n` +
+                                   `Data di Registrazione: ${new Date().toLocaleDateString('it-IT')}\n` +
+                                   `Ruolo: ${tipoOspite}\n` +
+                                   `Giorni di permanenza: ${numGiorni}\n` +
+                                   `-------------------------\n` +
+                                   `Cognome: ${cognome}\n` +
+                                   `Nome: ${nome}\n` +
+                                   `Data di Nascita: ${dataNascita}\n` +
+                                   `Sesso: ${sesso}\n` +
+                                   `Nazionalità: ${nazionalita}\n` +
+                                   `Tipo Documento: ${tipoDoc}\n` +
+                                   `Numero Documento: ${numDoc}\n` +
+                                   `Scadenza Documento: ${dataScadenza}\n` +
+                                   `-------------------------\n` +
+                                   `Stringa Grezza MRZ:\n${lines[0]}\n${lines[1]}\n${lines[2]}`;
+
+                // Prepariamo il nome del file per il download
+                nomeFileDaScaricare = `${cognome}_${nome}_${numDoc}.txt`.replace(/\s+/g, '_');
+
+                // Mostriamo a schermo i risultati
                 resultDiv.innerHTML = `
-                    <h3>Dati Estratti:</h3>
+                    <h3>Dati Acquisiti:</h3>
+                    <strong>Ruolo:</strong> ${tipoOspite} (${numGiorni} giorni)<br><br>
                     <strong>Cognome:</strong> ${cognome}<br>
                     <strong>Nome:</strong> ${nome}<br>
-                    <strong>Data di Nascita:</strong> ${formattaData(dataNascitaRaw)}<br>
-                    <strong>Sesso:</strong> ${sesso}<br>
-                    <strong>Nazionalità:</strong> ${nazionalita}<br>
-                    <strong>Tipo:</strong> ${tipoDoc}<br>
-                    <strong>N. Documento:</strong> ${numDoc}<br>
-                    <strong>Scadenza:</strong> ${formattaData(scadenzaRaw)}
+                    <strong>Nascita:</strong> ${dataNascita}<br>
+                    <strong>Doc:</strong> ${tipoDoc} - N. ${numDoc}
                 `;
                 resultDiv.style.display = "block";
+                
+                // Attiviamo il tasto di download
+                downloadBtn.style.display = "inline-block";
+
             } catch(e) {
-                statusDiv.textContent = "Ho letto il testo ma il formato non è quello standard di una CIE italiana. Riprova.";
+                statusDiv.textContent = "Ho letto il testo ma c'è stato un errore di formato. Riprova.";
             }
-            scanBtn.disabled = false; // Riattiva per un nuovo scatto
+            scanBtn.disabled = false; 
         }
+
+        // 4. Logica di Download del file TXT
+        downloadBtn.addEventListener('click', () => {
+            // Creiamo un file virtuale di testo (Blob)
+            const blob = new Blob([testoScaricabile], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            
+            // Creiamo un link temporaneo e simuliamo il click per scaricare
+            link.href = URL.createObjectURL(blob);
+            link.download = nomeFileDaScaricare;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
     </script>
 </body>
 </html>
