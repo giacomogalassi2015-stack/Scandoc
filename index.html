@@ -3,210 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lettore MRZ Documenti</title>
-    <script src="https://unpkg.com/mrz-detection"></script>
+    <title>Lettore MRZ Reale</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f2f5;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-        }
-        #video-container {
-            position: relative;
-            width: 100%;
-            max-width: 600px;
-            height: auto;
-            overflow: hidden;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        #video {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        #canvas {
-            display: none;
-        }
-        #start-button {
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
-            color: white;
-            background-color: #007bff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        #start-button:disabled {
-            background-color: #ccc;
-        }
-        #status {
-            margin-top: 10px;
-            font-style: italic;
-            color: #666;
-        }
-        #result {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 600px;
-            white-space: pre-wrap; /* Mantiene i ritorni a capo */
-        }
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; padding: 20px; }
+        #video-container { position: relative; width: 100%; max-width: 600px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        #video { width: 100%; display: block; }
+        /* Mirino per aiutare l'utente */
+        #mirino { position: absolute; top: 60%; left: 10%; width: 80%; height: 30%; border: 3px solid red; box-sizing: border-box; pointer-events: none; }
+        #canvas { display: none; }
+        .btn { margin-top: 15px; padding: 12px 24px; font-size: 16px; color: white; background-color: #007bff; border: none; border-radius: 5px; cursor: pointer; }
+        .btn:disabled { background-color: #ccc; }
+        #status { margin-top: 15px; font-weight: bold; color: #333; }
+        #result { margin-top: 20px; padding: 15px; background: white; border: 1px solid #ddd; width: 100%; max-width: 600px; white-space: pre-wrap; display: none; }
     </style>
 </head>
 <body>
 
-    <h1>Lettore Documenti MRZ</h1>
+    <h1>Lettore Documenti ITA</h1>
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
+        <div id="mirino"></div>
     </div>
+    
     <canvas id="canvas"></canvas>
-    <button id="start-button">Avvia Fotocamera</button>
-    <div id="status">Premi "Avvia Fotocamera" per iniziare.</div>
-    <div id="result">I dati letti appariranno qui...</div>
+    
+    <div>
+        <button id="start-button" class="btn">1. Accendi Fotocamera</button>
+        <button id="scan-button" class="btn" disabled>2. Scatta e Analizza</button>
+    </div>
+
+    <div id="status">In attesa...</div>
+    <div id="result"></div>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        const startButton = document.getElementById('start-button');
-        const status = document.getElementById('status');
+        const startBtn = document.getElementById('start-button');
+        const scanBtn = document.getElementById('scan-button');
+        const statusDiv = document.getElementById('status');
         const resultDiv = document.getElementById('result');
-        const context = canvas.getContext('2d', { willReadFrequently: true });
 
-        let isScanning = false;
-
-        startButton.addEventListener('click', startCamera);
-
-        async function startCamera() {
-            startButton.disabled = true;
-            status.textContent = "Accesso alla fotocamera...";
+        // 1. Avvio Fotocamera
+        startBtn.addEventListener('click', async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' } // Usa la fotocamera posteriore
-                });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                 video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    startScanning();
-                };
-                status.textContent = "Inquadra la zona MRZ del documento (le righe con <<<).";
+                startBtn.style.display = 'none'; // Nascondi il pulsante di avvio
+                scanBtn.disabled = false;        // Attiva il pulsante di scatto
+                statusDiv.textContent = "Inquadra le 3 righe con le freccette (<<<) nel riquadro rosso e premi Scatta.";
             } catch (err) {
-                console.error("Errore accesso fotocamera:", err);
-                status.textContent = "Errore: Impossibile accedere alla fotocamera. Verifica i permessi.";
-                startButton.disabled = false;
+                statusDiv.textContent = "Errore fotocamera: Verifica i permessi.";
             }
-        }
+        });
 
-        function startScanning() {
-            isScanning = true;
-            scanFrame();
-        }
+        // 2. Scatto e Lettura OCR
+        scanBtn.addEventListener('click', async () => {
+            scanBtn.disabled = true;
+            statusDiv.textContent = "Lettura in corso... tieni fermo il documento.";
+            resultDiv.style.display = "none";
 
-        function scanFrame() {
-            if (!isScanning) return;
-
+            // Imposta canvas come il video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/jpeg');
 
-            // La libreria mrz-detection non è importata come modulo ES6 qui.
-            // Si assume che sia disponibile globalmente.
-            // Prova a rilevare e leggere l'MRZ dall'immagine
             try {
-                // Tentativo di utilizzo della libreria mrz-detection
-                // Nota: Questo codice è una semplificazione. L'implementazione reale potrebbe variare.
-                // Per questo esempio, simuliamo una lettura riuscita con i dati dall'immagine dell'utente.
+                // Avvia Tesseract per leggere l'immagine
+                const { data: { text } } = await Tesseract.recognize(imageData, 'eng');
                 
-                // --- SIMULAZIONE LETTURA ---
-                // In un'implementazione reale, questa parte sarebbe sostituita dalla chiamata alla libreria.
-                // Visti i limiti dell'ambiente di esecuzione attuale con librerie esterne,
-                // e per fornire una demo funzionante, si mostrano i dati estratti dall'immagine fornita.
-                
-                const simulatedMRZLines = [
-                    "C<ITACA51478NE4<<<<<<<<<<<<<<<",
-                    "9504028M3204027ITA<<<<<<<<<<<8",
-                    "GALASSI<<GIACOMO<<<<<<<<<<<<<<"
-                ];
+                // Cerca le righe MRZ (stringhe lunghe 30 caratteri con lettere, numeri o '<')
+                // Le CIE italiane hanno 3 righe da 30 caratteri
+                const mrzRegex = /[A-Z0-9<]{30}/g;
+                const mrzLines = text.match(mrzRegex);
 
-                // Parsing manuale simulato dei dati MRZ (per la CIE)
-                // Linea 1
-                const tipoDoc = simulatedMRZLines[0].substring(0, 2);
-                const paese = simulatedMRZLines[0].substring(2, 5);
-                const numDoc = simulatedMRZLines[0].substring(5, 14);
-                
-                // Linea 2
-                const dataNascitaRaw = simulatedMRZLines[1].substring(0, 6); // YYMMDD
-                const sesso = simulatedMRZLines[1].substring(7, 8);
-                const scadenzaRaw = simulatedMRZLines[1].substring(8, 14); // YYMMDD
-                const nazionalita = simulatedMRZLines[1].substring(15, 18);
+                if (mrzLines && mrzLines.length >= 3) {
+                    statusDiv.textContent = "Documento letto con successo!";
+                    analizzaMRZ(mrzLines.slice(0, 3)); // Prendi le prime 3 righe valide
+                } else {
+                    statusDiv.textContent = "Non riesco a leggere bene il codice. Riprova, assicurati che sia a fuoco.";
+                    scanBtn.disabled = false;
+                }
 
-                // Linea 3 (Cognome<<Nome)
-                const nomiRaw = simulatedMRZLines[2].split('<<');
-                const cognome = nomiRaw[0].replace(/</g, ' ').trim();
-                const nome = nomiRaw[1].replace(/</g, ' ').trim();
+            } catch (err) {
+                statusDiv.textContent = "Errore durante il riconoscimento del testo.";
+                scanBtn.disabled = false;
+            }
+        });
 
-                // Formattazione Date
+        // 3. Estrazione dei dati dalle 3 righe trovate
+        function analizzaMRZ(lines) {
+            try {
+                // Linea 1: Tipo, Paese, Numero Documento
+                const tipoDoc = lines[0].substring(0, 2).replace(/</g, '');
+                const paese = lines[0].substring(2, 5).replace(/</g, '');
+                const numDoc = lines[0].substring(5, 14).replace(/</g, '');
+
+                // Linea 2: Data Nascita, Sesso, Scadenza, Nazionalità
+                const dataNascitaRaw = lines[1].substring(0, 6);
+                const sesso = lines[1].substring(7, 8);
+                const scadenzaRaw = lines[1].substring(8, 14);
+                const nazionalita = lines[1].substring(15, 18).replace(/</g, '');
+
+                // Linea 3: Cognome e Nome
+                const nomiRaw = lines[2].split('<<');
+                const cognome = nomiRaw[0] ? nomiRaw[0].replace(/</g, ' ').trim() : "Non letto";
+                const nome = nomiRaw[1] ? nomiRaw[1].replace(/</g, ' ').trim() : "Non letto";
+
+                // Funzione per formattare la data (AAMMGG -> GG/MM/AAAA)
                 const formattaData = (yymmdd) => {
+                    if(!/^\d{6}$/.test(yymmdd)) return yymmdd; // Se non sono numeri, restituisci grezzo
                     let year = parseInt(yymmdd.substring(0, 2));
                     const month = yymmdd.substring(2, 4);
                     const day = yymmdd.substring(4, 6);
-                    // Assunzione per il secolo: se > 50 è 1900, altrimenti 2000 (logica semplificata)
-                    year = year > 50 ? 1900 + year : 2000 + year;
+                    year = year > 50 ? 1900 + year : 2000 + year; // Logica secolo base
                     return `${day}/${month}/${year}`;
                 };
 
-                const dataNascita = formattaData(dataNascitaRaw);
-                const dataScadenza = formattaData(scadenzaRaw);
-
-                const risultatoTesto = `Cognome: ${cognome}\n` +
-                                     `Nome: ${nome}\n` +
-                                     `Data di Nascita: ${dataNascita}\n` +
-                                     `Sesso: ${sesso}\n` +
-                                     `Nazionalità: ${nazionalita}\n` +
-                                     `Tipo Documento: ${tipoDoc}\n` +
-                                     `Numero Documento: ${numDoc}\n` +
-                                     `Paese Emittente: ${paese}\n` +
-                                     `Scadenza: ${dataScadenza}`;
-                
-                // --- FINE SIMULAZIONE ---
-
-                // Se la lettura reale avesse successo
-                // resultDiv.textContent = risultatoTesto;
-                // status.textContent = "Lettura completata!";
-                // isScanning = false;
-                // video.srcObject.getTracks().forEach(track => track.stop()); // Ferma la fotocamera
-                // startButton.disabled = false;
-
-                // Per la demo, mostriamo subito i dati simulati
-                resultDiv.textContent = risultatoTesto;
-                status.textContent = "Lettura simulata completata per la demo.";
-                isScanning = false;
-                if (video.srcObject) {
-                    video.srcObject.getTracks().forEach(track => track.stop());
-                }
-                startButton.disabled = false;
-
-
-            } catch (e) {
-                // Continua a scansionare se non trova nulla o c'è un errore
-                console.error("Errore durante la scansione:", e);
-                requestAnimationFrame(scanFrame);
+                // Mostra i risultati
+                resultDiv.innerHTML = `
+                    <h3>Dati Estratti:</h3>
+                    <strong>Cognome:</strong> ${cognome}<br>
+                    <strong>Nome:</strong> ${nome}<br>
+                    <strong>Data di Nascita:</strong> ${formattaData(dataNascitaRaw)}<br>
+                    <strong>Sesso:</strong> ${sesso}<br>
+                    <strong>Nazionalità:</strong> ${nazionalita}<br>
+                    <strong>Tipo:</strong> ${tipoDoc}<br>
+                    <strong>N. Documento:</strong> ${numDoc}<br>
+                    <strong>Scadenza:</strong> ${formattaData(scadenzaRaw)}
+                `;
+                resultDiv.style.display = "block";
+            } catch(e) {
+                statusDiv.textContent = "Ho letto il testo ma il formato non è quello standard di una CIE italiana. Riprova.";
             }
-            
-            // In un caso reale con la libreria funzionante:
-            // requestAnimationFrame(scanFrame); 
+            scanBtn.disabled = false; // Riattiva per un nuovo scatto
         }
     </script>
 </body>
