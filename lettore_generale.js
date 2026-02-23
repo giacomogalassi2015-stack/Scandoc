@@ -65,18 +65,21 @@ scanBtn.addEventListener('click', async () => {
     cropCanvas.height = cropH;
     const cropCtx = cropCanvas.getContext('2d');
     
-    // Miglioriamo ancora il contrasto per aiutare l'IA con le freccette
-    cropCtx.filter = 'contrast(1.8) grayscale(1)';
+    // Contrasto leggermente ammorbidito per non distorcere le lettere
+    cropCtx.filter = 'contrast(1.4) grayscale(1)';
     cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
     const imageData = cropCanvas.toDataURL('image/jpeg', 1.0);
 
     try {
-        // CREAZIONE DEL WORKER: Il metodo infallibile per forzare la Whitelist
+        // CREAZIONE DEL WORKER
         const worker = await Tesseract.createWorker('eng');
         
         await worker.setParameters({
-            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<'
+            // 1. Forza i caratteri
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<',
+            // 2. LA MAGIA: PSM 6 = Considera l'immagine come un singolo blocco di testo uniforme
+            tessedit_pageseg_mode: '6' 
         });
 
         statusDiv.textContent = "Lettura dell'immagine in corso...";
@@ -88,7 +91,7 @@ scanBtn.addEventListener('click', async () => {
         // Prendiamo il testo grezzo per il DEBUG
         const testoGrezzo = text.toUpperCase().replace(/\n/g, '<br>');
 
-        // MOSTRA SOLO IL TESTO GREZZO (Salta il form)
+        // MOSTRA SOLO IL TESTO GREZZO
         resultDiv.innerHTML = `
             <h3 style="margin-top:0;">DEBUG - Testo Grezzo Letto:</h3>
             <div style="font-family: monospace; font-size: 16px; word-break: break-all; background: #eee; padding: 15px; border-radius: 5px; border: 1px solid #ccc;">
