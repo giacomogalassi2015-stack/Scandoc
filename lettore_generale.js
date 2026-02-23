@@ -25,7 +25,7 @@ startBtn.addEventListener('click', async () => {
 scanBtn.addEventListener('click', async () => {
     scanBtn.disabled = true;
     downloadBtn.style.display = "none";
-    statusDiv.textContent = "Analisi OCR in corso... attendi.";
+    statusDiv.textContent = "Inizializzazione motore OCR... attendi.";
     resultDiv.style.display = "none";
 
     canvas.width = video.videoWidth;
@@ -64,20 +64,28 @@ scanBtn.addEventListener('click', async () => {
     cropCanvas.width = cropW;
     cropCanvas.height = cropH;
     const cropCtx = cropCanvas.getContext('2d');
-    cropCtx.filter = 'contrast(1.5) grayscale(1)';
+    
+    // Miglioriamo ancora il contrasto per aiutare l'IA con le freccette
+    cropCtx.filter = 'contrast(1.8) grayscale(1)';
     cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
     const imageData = cropCanvas.toDataURL('image/jpeg', 1.0);
 
     try {
-        // L'OCR legge solo i caratteri corretti
-        const { data: { text } } = await Tesseract.recognize(
-            imageData, 
-            'eng',
-            { tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<' }
-        );
+        // CREAZIONE DEL WORKER: Il metodo infallibile per forzare la Whitelist
+        const worker = await Tesseract.createWorker('eng');
+        
+        await worker.setParameters({
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<'
+        });
 
-        // Prende il testo grezzo per il DEBUG
+        statusDiv.textContent = "Lettura dell'immagine in corso...";
+        const { data: { text } } = await worker.recognize(imageData);
+        
+        // Spegniamo il worker per liberare la memoria del telefono
+        await worker.terminate();
+
+        // Prendiamo il testo grezzo per il DEBUG
         const testoGrezzo = text.toUpperCase().replace(/\n/g, '<br>');
 
         // MOSTRA SOLO IL TESTO GREZZO (Salta il form)
@@ -88,7 +96,7 @@ scanBtn.addEventListener('click', async () => {
             </div>
         `;
         resultDiv.style.display = "block";
-        statusDiv.textContent = "Scansione di test completata. Copia il testo.";
+        statusDiv.textContent = "Scansione di test completata.";
 
     } catch (err) {
         statusDiv.textContent = "Errore OCR: " + err.message;
