@@ -1,98 +1,63 @@
-body {
-    font-family: Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background-color: #f0f2f5;
-    padding: 10px;
-    margin: 0;
-}
+body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; padding: 10px; margin: 0; }
+h2 { margin-top: 5px; font-size: 1.2rem; }
 
-h2 {
-    margin-top: 5px;
-    font-size: 1.2rem;
-}
+#video-container { position: relative; width: 100%; max-width: 640px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.2); background: #000; }
+#video { width: 100%; display: block; object-fit: cover; }
 
-#video-container {
-    position: relative;
-    width: 100%;
-    max-width: 640px;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    background: #000;
-}
-
-#video {
-    width: 100%;
-    display: block;
-    object-fit: cover;
-    /* Impedisce espansioni anomale su Android landscape */
-    max-height: 60vh;
-}
-
-/* Mirino posizionato nella metà inferiore del video:
-   la MRZ della CIE si trova sempre nella banda in basso.
-   bottom: 5% lo ancora al fondo lasciando un piccolo margine. */
+/* --- CSS Mirino (Claude) --- */
 #mirino {
     position: absolute;
-    bottom: 5%;
-    left: 5%;
-    width: 90%;
-    height: 28%;
-    border: 3px dashed #00ff00;
+    border: 2px solid rgba(0, 255, 128, 0.9);
     box-sizing: border-box;
-    pointer-events: none;
-    /* Oscuramento area esterna al mirino */
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    cursor: move;
+    touch-action: none;
+    box-shadow:
+        0 0 0 2px rgba(0, 255, 128, 0.4),
+        0 0 0 9999px rgba(0, 0, 0, 0.45);
+    border-radius: 4px;
 }
 
-.btn {
-    margin-top: 15px;
-    padding: 15px 25px;
-    font-size: 16px;
-    font-weight: bold;
-    color: white;
-    background-color: #007bff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    width: 90%;
-    max-width: 400px;
+#mirino::before,
+#mirino::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-color: #00ff80;
+    border-style: solid;
+}
+#mirino::before {
+    top: -2px; left: -2px;
+    border-width: 3px 0 0 3px;
+}
+#mirino::after {
+    bottom: -2px; right: -2px;
+    border-width: 0 3px 3px 0;
 }
 
-.btn-success {
-    background-color: #28a745;
+.mirino-handle {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    background: rgba(0, 255, 128, 0.85);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    touch-action: none;
+    z-index: 10;
 }
+/* Posizionamento maniglie (le stesse fornite da Claude) */
+.mirino-handle[data-pos="nw"] { top: -11px;  left: -11px;  cursor: nw-resize; }
+.mirino-handle[data-pos="ne"] { top: -11px;  right: -11px; cursor: ne-resize; }
+.mirino-handle[data-pos="sw"] { bottom: -11px; left: -11px; cursor: sw-resize; }
+.mirino-handle[data-pos="se"] { bottom: -11px; right: -11px; cursor: se-resize; }
+.mirino-handle[data-pos="n"]  { top: -11px;  left: calc(50% - 11px); cursor: n-resize; }
+.mirino-handle[data-pos="s"]  { bottom: -11px; left: calc(50% - 11px); cursor: s-resize; }
+.mirino-handle[data-pos="w"]  { top: calc(50% - 11px); left: -11px; cursor: w-resize; }
+.mirino-handle[data-pos="e"]  { top: calc(50% - 11px); right: -11px; cursor: e-resize; }
+/* -------------------------- */
 
-.btn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-}
-
-#status {
-    margin-top: 15px;
-    font-weight: bold;
-    color: #333;
-    text-align: center;
-    padding: 0 10px;
-    min-height: 1.4em; /* Evita layout shift quando il testo cambia */
-}
-
-.help-text {
-    font-size: 0.9rem;
-    color: #555;
-    text-align: center;
-    margin-bottom: 10px;
-}
-
-#result {
-    width: 90%;
-    max-width: 640px;
-    padding: 10px 0;
-}
-
-#preview-container {
-    width: 90%;
-    max-width: 640px;
-}
+.btn { margin-top: 15px; padding: 15px 25px; font-size: 16px; font-weight: bold; color: white; background-color: #007bff; border: none; border-radius: 8px; cursor: pointer; width: 90%; max-width: 400px; }
+.btn-success { background-color: #28a745; }
+.btn:disabled { background-color: #ccc; cursor: not-allowed; }
+#status { margin-top: 15px; font-weight: bold; color: #333; text-align: center; padding: 0 10px; }
+.help-text { font-size: 0.9rem; color: #555; text-align: center; margin-bottom: 10px; }
