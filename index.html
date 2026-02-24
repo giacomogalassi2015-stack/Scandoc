@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#28a745">
     <title>Scanner ICAO - Sauvola Engine</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -13,7 +13,7 @@
     <p class="help-text">Gira il telefono in orizzontale e inquadra la banda in basso.</p>
     
     <div id="video-container">
-        <video id="video" autoplay playsinline></video>
+        <video id="video" autoplay playsinline muted></video>
         <div id="mirino"></div>
     </div>
     
@@ -29,6 +29,9 @@
         <canvas id="crop-preview" style="border: 2px solid #28a745; max-width: 100%; background: #fff;"></canvas>
     </div>
 
-    <script src="lettore_generale.js"></script>
+    <div id="result" style="display:none; margin-top: 15px;"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="lettore_generale.js" defer></script>
 </body>
 </html>

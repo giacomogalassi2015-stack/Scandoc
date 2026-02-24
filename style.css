@@ -1,24 +1,98 @@
-body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; padding: 10px; margin: 0; }
-h2 { margin-top: 5px; font-size: 1.2rem; }
-
-#video-container { position: relative; width: 100%; max-width: 640px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.2); background: #000; }
-#video { width: 100%; display: block; object-fit: cover; }
-
-/* Mirino ottimizzato: largo ma non troppo alto */
-#mirino { 
-    position: absolute; 
-    top: 55%; 
-    left: 5%; 
-    width: 90%; 
-    height: 25%; 
-    border: 3px dashed #00ff00; 
-    box-sizing: border-box; 
-    pointer-events: none; 
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); 
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f0f2f5;
+    padding: 10px;
+    margin: 0;
 }
 
-.btn { margin-top: 15px; padding: 15px 25px; font-size: 16px; font-weight: bold; color: white; background-color: #007bff; border: none; border-radius: 8px; cursor: pointer; width: 90%; max-width: 400px; }
-.btn-success { background-color: #28a745; }
-.btn:disabled { background-color: #ccc; cursor: not-allowed; }
-#status { margin-top: 15px; font-weight: bold; color: #333; text-align: center; padding: 0 10px; }
-.help-text { font-size: 0.9rem; color: #555; text-align: center; margin-bottom: 10px; }
+h2 {
+    margin-top: 5px;
+    font-size: 1.2rem;
+}
+
+#video-container {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    background: #000;
+}
+
+#video {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+    /* Impedisce espansioni anomale su Android landscape */
+    max-height: 60vh;
+}
+
+/* Mirino posizionato nella metà inferiore del video:
+   la MRZ della CIE si trova sempre nella banda in basso.
+   bottom: 5% lo ancora al fondo lasciando un piccolo margine. */
+#mirino {
+    position: absolute;
+    bottom: 5%;
+    left: 5%;
+    width: 90%;
+    height: 28%;
+    border: 3px dashed #00ff00;
+    box-sizing: border-box;
+    pointer-events: none;
+    /* Oscuramento area esterna al mirino */
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+}
+
+.btn {
+    margin-top: 15px;
+    padding: 15px 25px;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    background-color: #007bff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 90%;
+    max-width: 400px;
+}
+
+.btn-success {
+    background-color: #28a745;
+}
+
+.btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+#status {
+    margin-top: 15px;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+    padding: 0 10px;
+    min-height: 1.4em; /* Evita layout shift quando il testo cambia */
+}
+
+.help-text {
+    font-size: 0.9rem;
+    color: #555;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+#result {
+    width: 90%;
+    max-width: 640px;
+    padding: 10px 0;
+}
+
+#preview-container {
+    width: 90%;
+    max-width: 640px;
+}
