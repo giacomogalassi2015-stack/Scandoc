@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#28a745">
+    <meta name="description" content="Scanner MRTD per la lettura della banda MRZ tramite Google Cloud Vision.">
     <title>Scanner ICAO - Cloud Vision</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -11,26 +12,27 @@
 
     <h2>Scanner MRTD Pro</h2>
     <p class="help-text">Gira il telefono in orizzontale e inquadra la banda in basso.</p>
-    
+
     <div id="video-container">
         <video id="video" autoplay playsinline muted></video>
         <div id="mirino"></div>
     </div>
-    
+
+    <!-- Canvas di servizio (invisibile) usato per il crop interno -->
     <canvas id="canvas" style="display:none;"></canvas>
-    
+
     <button id="start-button" class="btn">1. Accendi Fotocamera</button>
     <button id="scan-button" class="btn btn-success" style="display:none;">2. Scatta e Leggi</button>
 
     <div id="status">In attesa...</div>
-    
-    <div id="preview-container" style="text-align: center; margin-top: 15px; display: none;">
-        <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold; color:#333;">Anteprima Inviata:</p>
-        <canvas id="crop-preview" style="border: 2px solid #28a745; max-width: 100%; background: #fff;"></canvas>
+
+    <div id="preview-container">
+        <p>Anteprima Inviata:</p>
+        <canvas id="crop-preview"></canvas>
     </div>
 
-    <div id="result" style="display:none; margin-top: 15px; width: 100%; max-width: 640px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);"></div>
+    <div id="result"></div>
 
-    <script src="lettore_generale.js" defer></script>
+    <script src="lettore_generale.js"></script>
 </body>
 </html>

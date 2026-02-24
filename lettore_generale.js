@@ -16,7 +16,7 @@ const previewContainer = document.getElementById('preview-container');
 const constraints = { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } };
 
 // =====================================================================
-// 0. LOGICA MIRINO INTERATTIVO (Da Claude)
+// 0. LOGICA MIRINO INTERATTIVO
 // =====================================================================
 const container = document.getElementById('video-container');
 const MIN_W = 80, MIN_H = 40;
@@ -25,11 +25,11 @@ function initMirino() {
     const cw = container.clientWidth;
     const ch = container.clientHeight;
     // Evita errori se il contenitore non ha ancora dimensioni
-    if (cw === 0 || ch === 0) return; 
+    if (cw === 0 || ch === 0) return;
 
     const w  = Math.round(cw * 0.8);
     const h  = Math.round(ch * 0.25);
-    
+
     mirino.style.width  = w + 'px';
     mirino.style.height = h + 'px';
     mirino.style.left   = Math.round((cw - w) / 2) + 'px';
@@ -69,13 +69,13 @@ function applyRect(x, y, w, h) {
     mirino.style.height = h + 'px';
 }
 
-let action = null; 
+let action = null;
 
 function onTouchStart(e) {
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
     const pos = e.target.dataset.pos;
-    
+
     // Inizia un'azione se il target è il mirino o una maniglia
     if (e.target === mirino || e.target.classList.contains('mirino-handle')) {
         e.preventDefault();
@@ -96,23 +96,23 @@ function onTouchMove(e) {
     const dx = t.clientX - action.startX;
     const dy = t.clientY - action.startY;
     const r  = action.startRect;
-    
+
     if (action.type === 'drag') {
         applyRect(r.x + dx, r.y + dy, r.w, r.h);
         return;
     }
-    
+
     let { x, y, w, h } = r;
     const p = action.pos;
-    
+
     if (p.includes('e')) w = r.w + dx;
     if (p.includes('s')) h = r.h + dy;
     if (p.includes('w')) { x = r.x + dx; w = r.w - dx; }
     if (p.includes('n')) { y = r.y + dy; h = r.h - dy; }
-    
+
     if (w < MIN_W) { if (p.includes('w')) x = r.x + r.w - MIN_W; w = MIN_W; }
     if (h < MIN_H) { if (p.includes('n')) y = r.y + r.h - MIN_H; h = MIN_H; }
-    
+
     applyRect(x, y, w, h);
 }
 
@@ -148,7 +148,34 @@ document.addEventListener('mousemove', e => {
     applyRect(x,y,w,h);
 });
 document.addEventListener('mouseup', () => { action = null; });
-window.addEventListener('resize', initMirino);
+
+// =====================================================================
+// RESIZE / ROTAZIONE SCHERMO — approccio robusto per mobile
+// =====================================================================
+let resizeTimer = null;
+
+function safeInitMirino() {
+    // Annulla un eventuale ricalcolo già schedulato
+    if (resizeTimer !== null) {
+        clearTimeout(resizeTimer);
+    }
+    // 150ms lasciano al browser il tempo di aggiornare il viewport,
+    // poi il doppio rAF garantisce che il paint sia avvenuto
+    // prima della lettura di clientWidth/clientHeight.
+    resizeTimer = setTimeout(() => {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                initMirino();
+                resizeTimer = null;
+            });
+        });
+    }, 150);
+}
+
+window.addEventListener('resize', safeInitMirino);
+// orientationchange è deprecato ma ancora emesso da Safari/iOS:
+// gestirlo esplicitamente raddoppia la copertura senza costi aggiuntivi.
+window.addEventListener('orientationchange', safeInitMirino);
 
 // =====================================================================
 // 1. LOGICHE ICAO
@@ -176,7 +203,7 @@ function extractAndFixMRZ(rawText) {
     while ((match = lineRegex.exec(cleaned.replace(/\n/g, ''))) !== null) {
         candidates.push(match[0]);
     }
-    
+
     const lines = candidates.map(line => {
         if (line.length > 30) line = line.substring(0, 30);
         if (line.length < 30) line = line.padEnd(30, '<');
@@ -197,7 +224,7 @@ function extractAndFixMRZ(rawText) {
             const expCheck = parseInt(line[14]);
             valid = !isNaN(dobCheck) && !isNaN(expCheck) && icaoCheckDigit(dob) === dobCheck && icaoCheckDigit(exp) === expCheck;
         } else if (idx === 2 && line.length === 30) {
-            valid = true; 
+            valid = true;
         }
         return { line, checksumValid: valid };
     });
@@ -213,8 +240,8 @@ startBtn.addEventListener('click', async () => {
         video.srcObject = stream;
         startBtn.style.display = 'none';
         scanBtn.style.display = 'block';
-        
-        // Inizializza il mirino dopo che il video ha caricato i metadati (per avere dimensioni corrette)
+
+        // Inizializza il mirino dopo che il video ha caricato i metadati
         video.onloadedmetadata = () => {
             initMirino();
         };
@@ -226,7 +253,7 @@ startBtn.addEventListener('click', async () => {
 });
 
 // =====================================================================
-// 3. SCATTO E CROP AGGIORNATO
+// 3. SCATTO E CROP — con controlli di sicurezza e diagnostica estesa
 // =====================================================================
 scanBtn.addEventListener('click', async () => {
     scanBtn.disabled = true;
@@ -234,44 +261,61 @@ scanBtn.addEventListener('click', async () => {
     resultDiv.style.display = "none";
     previewContainer.style.display = "none";
 
-    // Ottieni dimensioni video interne (reali) vs visualizzate
-    const videoRatioX = video.videoWidth / video.clientWidth;
-    const videoRatioY = video.videoHeight / video.clientHeight;
-
-    // Prendi le coordinate attuali del mirino dal suo style inline
-    const rect = getRect();
-    
-    // Aggiungi un piccolo padding
-    const PADDING = 10;
-    
-    // Calcola il crop mappando le coordinate dello schermo al video originale
-    const cropX = Math.max(0, rect.x * videoRatioX - PADDING);
-    const cropY = Math.max(0, rect.y * videoRatioY - PADDING);
-    const cropW = Math.min(video.videoWidth - cropX, rect.w * videoRatioX + PADDING * 2);
-    const cropH = Math.min(video.videoHeight - cropY, rect.h * videoRatioY + PADDING * 2);
-
-    // Imposta canvas e ritaglia dal video full-res
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    cropCanvas.width = cropW;
-    cropCanvas.height = cropH;
-    const cropCtx = cropCanvas.getContext('2d');
-    cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-    const base64Image = cropCanvas.toDataURL('image/jpeg', 0.9);
-
     try {
-        const response = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64Image })
-        });
+        // Sanity check: il video deve avere dimensioni valide
+        if (!video.videoWidth || !video.videoHeight || !video.clientWidth || !video.clientHeight) {
+            throw new Error('Video non ancora pronto. Riprova tra un momento.');
+        }
+
+        const videoRatioX = video.videoWidth  / video.clientWidth;
+        const videoRatioY = video.videoHeight / video.clientHeight;
+
+        const rect = getRect();
+        const PADDING = 10;
+
+        // Coordinate di crop mappate al video reale, con clamp esplicito
+        // Math.max(1, ...) impedisce valori nulli o negativi che mandano in crash drawImage
+        const cropX = Math.max(0, Math.floor(rect.x * videoRatioX - PADDING));
+        const cropY = Math.max(0, Math.floor(rect.y * videoRatioY - PADDING));
+        const cropW = Math.max(1, Math.min(video.videoWidth  - cropX, Math.floor(rect.w * videoRatioX + PADDING * 2)));
+        const cropH = Math.max(1, Math.min(video.videoHeight - cropY, Math.floor(rect.h * videoRatioY + PADDING * 2)));
+
+        console.log('[CROP]', { cropX, cropY, cropW, cropH, videoW: video.videoWidth, videoH: video.videoHeight });
+
+        // Disegna il fotogramma completo sul canvas di servizio
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Ritaglia la zona del mirino
+        cropCanvas.width  = cropW;
+        cropCanvas.height = cropH;
+        const cropCtx = cropCanvas.getContext('2d');
+        cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+        const base64Image = cropCanvas.toDataURL('image/jpeg', 0.9);
+
+        // --- FETCH con diagnostica estesa ---
+        let response;
+        try {
+            response = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: base64Image })
+            });
+        } catch (fetchErr) {
+            // Errore di rete puro (offline, CORS preflight fallito, timeout, ecc.)
+            const detail = `Errore di rete [${fetchErr.name}]: ${fetchErr.message}`;
+            console.error('[FETCH ERROR]', fetchErr);
+            throw new Error(detail);
+        }
 
         if (!response.ok) {
-            throw new Error(`Errore dal server: ${response.status}`);
+            let serverMsg = '';
+            try { serverMsg = await response.text(); } catch (_) {}
+            console.error('[SERVER ERROR]', response.status, serverMsg);
+            throw new Error(`Errore server ${response.status}: ${serverMsg || response.statusText}`);
         }
 
         const data = await response.json();
@@ -289,9 +333,9 @@ scanBtn.addEventListener('click', async () => {
         resultDiv.innerHTML = `
             <h3>Risultato Google Vision + ICAO</h3>
             ${mrzLines.length > 0 ? mrzLines.map((r, i) => `
-                <div style="font-family:monospace; font-size:15px; padding:8px; 
-                            background:${r.checksumValid ? '#e6ffe6' : '#fff3cd'}; 
-                            border-left: 4px solid ${r.checksumValid ? 'green' : 'orange'}; 
+                <div style="font-family:monospace; font-size:15px; padding:8px;
+                            background:${r.checksumValid ? '#e6ffe6' : '#fff3cd'};
+                            border-left: 4px solid ${r.checksumValid ? 'green' : 'orange'};
                             margin-bottom:4px;">
                     Riga ${i+1}: ${r.line}
                     <br><span style="font-size:11px; color:gray;">
@@ -299,7 +343,7 @@ scanBtn.addEventListener('click', async () => {
                     </span>
                 </div>
             `).join('') : '<div style="color:red;">Impossibile isolare 3 righe MRZ valide. Riprova.</div>'}
-            
+
             <h4 style="margin-top: 15px;">Testo Grezzo Google (Per Debug):</h4>
             <div style="font-size: 11px; color: gray; font-family: monospace; word-break: break-all;">
                 ${rawText.replace(/\n/g, '<br>')}
@@ -309,9 +353,11 @@ scanBtn.addEventListener('click', async () => {
         statusDiv.textContent = "Scansione completata!";
 
     } catch (err) {
-        statusDiv.textContent = err.message;
-        console.error(err);
+        // Mostra l'errore esatto all'utente E in console
+        const msg = `Errore [${err.name ?? 'Error'}]: ${err.message}`;
+        statusDiv.textContent = msg;
+        console.error('[SCAN ERROR]', err);
     }
-    
+
     scanBtn.disabled = false;
 });

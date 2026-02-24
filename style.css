@@ -1,10 +1,37 @@
-body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; padding: 10px; margin: 0; }
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f0f2f5;
+    padding: 10px;
+    margin: 0;
+    overflow-x: hidden; /* permette alle maniglie del mirino di uscire senza scrollbar */
+}
+
 h2 { margin-top: 5px; font-size: 1.2rem; }
 
-#video-container { position: relative; width: 100%; max-width: 640px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.2); background: #000; }
-#video { width: 100%; display: block; object-fit: cover; }
+/* --- Video container --- */
+#video-container {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    background: #000;
+    /* niente padding: il mirino deve riferirsi esattamente all'area video */
+}
 
-/* --- CSS Mirino (Claude) --- */
+#video {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+/* --- Mirino --- */
 #mirino {
     position: absolute;
     border: 2px solid rgba(0, 255, 128, 0.9);
@@ -13,10 +40,11 @@ h2 { margin-top: 5px; font-size: 1.2rem; }
     touch-action: none;
     box-shadow:
         0 0 0 2px rgba(0, 255, 128, 0.4),
-        0 0 0 9999px rgba(0, 0, 0, 0.45);
+        0 0 0 100vmax rgba(0, 0, 0, 0.45);
     border-radius: 4px;
 }
 
+/* Angolini decorativi */
 #mirino::before,
 #mirino::after {
     content: '';
@@ -26,15 +54,10 @@ h2 { margin-top: 5px; font-size: 1.2rem; }
     border-color: #00ff80;
     border-style: solid;
 }
-#mirino::before {
-    top: -2px; left: -2px;
-    border-width: 3px 0 0 3px;
-}
-#mirino::after {
-    bottom: -2px; right: -2px;
-    border-width: 0 3px 3px 0;
-}
+#mirino::before { top: -2px;    left: -2px;  border-width: 3px 0 0 3px; }
+#mirino::after  { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; }
 
+/* --- Maniglie di ridimensionamento --- */
 .mirino-handle {
     position: absolute;
     width: 22px;
@@ -45,19 +68,83 @@ h2 { margin-top: 5px; font-size: 1.2rem; }
     touch-action: none;
     z-index: 10;
 }
-/* Posizionamento maniglie (le stesse fornite da Claude) */
-.mirino-handle[data-pos="nw"] { top: -11px;  left: -11px;  cursor: nw-resize; }
-.mirino-handle[data-pos="ne"] { top: -11px;  right: -11px; cursor: ne-resize; }
-.mirino-handle[data-pos="sw"] { bottom: -11px; left: -11px; cursor: sw-resize; }
-.mirino-handle[data-pos="se"] { bottom: -11px; right: -11px; cursor: se-resize; }
-.mirino-handle[data-pos="n"]  { top: -11px;  left: calc(50% - 11px); cursor: n-resize; }
-.mirino-handle[data-pos="s"]  { bottom: -11px; left: calc(50% - 11px); cursor: s-resize; }
-.mirino-handle[data-pos="w"]  { top: calc(50% - 11px); left: -11px; cursor: w-resize; }
-.mirino-handle[data-pos="e"]  { top: calc(50% - 11px); right: -11px; cursor: e-resize; }
-/* -------------------------- */
 
-.btn { margin-top: 15px; padding: 15px 25px; font-size: 16px; font-weight: bold; color: white; background-color: #007bff; border: none; border-radius: 8px; cursor: pointer; width: 90%; max-width: 400px; }
-.btn-success { background-color: #28a745; }
+/* Area di tocco estesa a ~44px senza modificare il visual */
+.mirino-handle::after {
+    content: '';
+    position: absolute;
+    inset: -12px;
+}
+
+.mirino-handle[data-pos="nw"] { top: -11px;             left: -11px;            cursor: nw-resize; }
+.mirino-handle[data-pos="ne"] { top: -11px;             right: -11px;           cursor: ne-resize; }
+.mirino-handle[data-pos="sw"] { bottom: -11px;          left: -11px;            cursor: sw-resize; }
+.mirino-handle[data-pos="se"] { bottom: -11px;          right: -11px;           cursor: se-resize; }
+.mirino-handle[data-pos="n"]  { top: -11px;             left: calc(50% - 11px); cursor: n-resize;  }
+.mirino-handle[data-pos="s"]  { bottom: -11px;          left: calc(50% - 11px); cursor: s-resize;  }
+.mirino-handle[data-pos="w"]  { top: calc(50% - 11px);  left: -11px;            cursor: w-resize;  }
+.mirino-handle[data-pos="e"]  { top: calc(50% - 11px);  right: -11px;           cursor: e-resize;  }
+
+/* --- Bottoni --- */
+.btn {
+    margin-top: 15px;
+    padding: 15px 25px;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    background-color: #007bff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 90%;
+    max-width: 400px;
+}
+.btn-success  { background-color: #28a745; }
 .btn:disabled { background-color: #ccc; cursor: not-allowed; }
-#status { margin-top: 15px; font-weight: bold; color: #333; text-align: center; padding: 0 10px; }
-.help-text { font-size: 0.9rem; color: #555; text-align: center; margin-bottom: 10px; }
+
+/* --- Testi --- */
+#status {
+    margin-top: 15px;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+    padding: 0 10px;
+}
+.help-text {
+    font-size: 0.9rem;
+    color: #555;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+/* --- Anteprima crop --- */
+#preview-container {
+    display: none; /* mostrato via JS dopo la scansione */
+    text-align: center;
+    margin-top: 15px;
+    width: 100%;
+    max-width: 640px;
+}
+#preview-container p {
+    margin: 0 0 5px 0;
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+}
+#crop-preview {
+    border: 2px solid #28a745;
+    max-width: 100%;
+    background: #fff;
+}
+
+/* --- Box risultato MRZ --- */
+#result {
+    display: none; /* mostrato via JS dopo la scansione */
+    margin-top: 15px;
+    width: 100%;
+    max-width: 640px;
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
