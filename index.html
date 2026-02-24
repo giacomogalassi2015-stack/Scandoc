@@ -3,38 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner ICAO Pro</title>
+    <title>Scanner ICAO - Sauvola Engine</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
-    <h2>Scanner MRTD (Alloggiati)</h2>
-    <p class="help-text">Gira il telefono in orizzontale.</p>
+    <h2>Scanner MRTD Pro</h2>
+    <p class="help-text">Gira il telefono in orizzontale e inquadra la banda in basso.</p>
     
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
         <div id="mirino"></div>
     </div>
     
-    <canvas id="canvas"></canvas>
+    <canvas id="canvas" style="display:none;"></canvas>
     
     <button id="start-button" class="btn">1. Accendi Fotocamera</button>
-    <div style="display: flex; gap: 10px; width: 90%; max-width: 400px; justify-content: center;">
-        <button id="scan-button" class="btn" style="display:none; width: 50%;">2. Scatta</button>
-        <button id="download-button" class="btn btn-success" style="display:none; width: 50%;">3. Scarica TXT</button>
-    </div>
+    <button id="scan-button" class="btn btn-success" style="display:none;">2. Scatta e Binarizza</button>
 
     <div id="status">In attesa...</div>
     
-    <div style="text-align: center; margin-top: 10px;">
-        <canvas id="crop-preview"></canvas>
+    <div id="preview-container" style="text-align: center; margin-top: 15px; display: none;">
+        <p style="margin:0 0 5px 0; font-size:12px; font-weight:bold; color:#333;">Anteprima Sauvola (Bianco/Nero puro):</p>
+        <canvas id="crop-preview" style="border: 2px solid #28a745; max-width: 100%; background: #fff;"></canvas>
     </div>
 
-    <div id="result"></div>
-
-    <script src="estrai_carta_identita.js"></script>
-    <script src="gestione_output.js"></script>
     <script src="lettore_generale.js"></script>
 </body>
 </html>
