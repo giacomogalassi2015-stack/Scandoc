@@ -243,22 +243,43 @@ startBtn.addEventListener('click', async () => {
 });
 
 // =====================================================================
-// 3. SCATTO E CROP — TRUCCO GRANDANGOLO
+// 3. SCATTO E CROP — con calcolo corretto per object-fit: cover
 // =====================================================================
 
-// (Manteniamo la funzione di Claude nel codice per non rompere la struttura, anche se non la usiamo)
+/**
+ * Calcola la geometria reale del video renderizzato dal browser
+ * tenendo conto di object-fit: cover.
+ *
+ * Con cover il browser scala il video al valore MAGGIORE tra
+ * scaleX = displayW / videoW  e  scaleY = displayH / videoH,
+ * poi centra il risultato. I pixel in eccesso vengono tagliati.
+ *
+ * Restituisce { scale, offsetX, offsetY } dove:
+ *   scale   = px-schermo per px-sorgente
+ *   offsetX = pixel sorgente tagliati a sinistra
+ *   offsetY = pixel sorgente tagliati in alto
+ */
 function getCoverGeometry() {
     const displayW = video.clientWidth;
     const displayH = video.clientHeight;
     const srcW     = video.videoWidth;
     const srcH     = video.videoHeight;
+
+    // Scala applicata da object-fit: cover
     const scale = Math.max(displayW / srcW, displayH / srcH);
+
+    // Dimensioni del video scalato (in px schermo)
     const scaledW = srcW * scale;
     const scaledH = srcH * scale;
+
+    // Offset in px schermo (quanto sporge oltre il contenitore)
     const overshootX = (scaledW - displayW) / 2;
     const overshootY = (scaledH - displayH) / 2;
+
+    // Offset in px sorgente (quanto è stato tagliato)
     const offsetX = overshootX / scale;
     const offsetY = overshootY / scale;
+
     return { scale, offsetX, offsetY };
 }
 
@@ -273,24 +294,41 @@ scanBtn.addEventListener('click', async () => {
             throw new Error('Video non ancora pronto. Riprova tra un momento.');
         }
 
-        // --- TRUCCO GRANDANGOLO: NESSUN RITAGLIO, MANDIAMO TUTTA LA FOTO A GOOGLE ---
-        
-        // 1. Disegna il fotogramma completo sul canvas principale
+        // --- Geometria corretta per object-fit: cover ---
+        const { scale, offsetX, offsetY } = getCoverGeometry();
+
+        const rect = getRect();
+        const PADDING = 10;
+
+        // Converti le coordinate dello schermo in coordinate sorgente:
+        //   px_sorgente = px_schermo / scale + offset_sorgente
+        const cropX = Math.max(0, Math.floor(rect.x / scale + offsetX - PADDING));
+        const cropY = Math.max(0, Math.floor(rect.y / scale + offsetY - PADDING));
+        const cropW = Math.max(1, Math.min(
+            video.videoWidth  - cropX,
+            Math.floor(rect.w / scale + PADDING * 2)
+        ));
+        const cropH = Math.max(1, Math.min(
+            video.videoHeight - cropY,
+            Math.floor(rect.h / scale + PADDING * 2)
+        ));
+
+        console.log('[COVER GEOMETRY]', { scale, offsetX, offsetY });
+        console.log('[CROP]', { cropX, cropY, cropW, cropH, videoW: video.videoWidth, videoH: video.videoHeight });
+
+        // Disegna il fotogramma completo sul canvas di servizio
         canvas.width  = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // 2. Mostriamo in anteprima all'utente l'intero fotogramma (ridimensionato via CSS)
-        cropCanvas.width  = canvas.width;
-        cropCanvas.height = canvas.height;
+        // Ritaglia la zona del mirino
+        cropCanvas.width  = cropW;
+        cropCanvas.height = cropH;
         const cropCtx = cropCanvas.getContext('2d');
-        cropCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height);
+        cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
-        // 3. Convertiamo l'intera immagine in Base64 (Qualità 0.8)
-        const base64Image = canvas.toDataURL('image/jpeg', 0.8);
-        
-        console.log('[SCATTO] Fotogramma intero inviato a Google Vision.');
+        const base64Image = cropCanvas.toDataURL('image/jpeg', 0.9);
 
         let response;
         try {
@@ -320,18 +358,18 @@ scanBtn.addEventListener('click', async () => {
         }
 
         previewContainer.style.display = "block";
-        document.querySelector('#preview-container p').textContent = "Foto intera inviata a Google:";
+        document.querySelector('#preview-container p').textContent = "Foto inviata a Google:";
 
         const mrzLines = extractAndFixMRZ(rawText);
 
-        resultDiv.innerHTML = `
+     resultDiv.innerHTML = `
             <h3>Risultato Google Vision + ICAO</h3>
             ${mrzLines.length > 0 ? mrzLines.map((r, i) => `
                 <div style="font-family:monospace; font-size:15px; padding:8px;
                             background:${r.checksumValid ? '#e6ffe6' : '#fff3cd'};
                             border-left: 4px solid ${r.checksumValid ? 'green' : 'orange'};
                             margin-bottom:4px;">
-                    Riga ${i+1}: ${r.line}
+                    Riga ${i+1}: ${r.line.replace(/</g, '&lt;')}
                     <br><span style="font-size:11px; color:gray;">
                         ${r.checksumValid ? '✓ Checksum OK' : '⚠ Attenzione: Checksum Fallito'}
                     </span>
@@ -340,7 +378,7 @@ scanBtn.addEventListener('click', async () => {
 
             <h4 style="margin-top: 15px;">Testo Grezzo Google (Per Debug):</h4>
             <div style="font-size: 11px; color: gray; font-family: monospace; word-break: break-all;">
-                ${rawText.replace(/\n/g, '<br>')}
+                ${rawText.replace(/</g, '&lt;').replace(/\n/g, '<br>')}
             </div>
         `;
         resultDiv.style.display = "block";

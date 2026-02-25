@@ -34,7 +34,7 @@ h2 { margin-top: 5px; font-size: 1.2rem; }
 /* --- Mirino --- */
 #mirino {
     position: absolute;
-    border: 2px solid rgba(255, 0, 255, 0.9);
+    border: 2px solid rgba(0, 255, 128, 0.9);
     box-sizing: border-box;
     cursor: move;
     touch-action: none;
@@ -99,7 +99,7 @@ h2 { margin-top: 5px; font-size: 1.2rem; }
     width: 90%;
     max-width: 400px;
 }
-.btn-success  { background-color: #e100ff; }
+.btn-success  { background-color: #a72828; }
 .btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
 /* --- Testi --- */
@@ -132,7 +132,7 @@ h2 { margin-top: 5px; font-size: 1.2rem; }
     color: #333;
 }
 #crop-preview {
-    border: 2px solid #d400ff;
+    border: 2px solid #b3ff00;
     max-width: 100%;
     background: #fff;
 }
