@@ -99,7 +99,7 @@ h2 { margin-top: 5px; font-size: 1.2rem; }
     width: 90%;
     max-width: 400px;
 }
-.btn-success  { background-color: #28a745; }
+.btn-success  { background-color: #a72828; }
 .btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
 /* --- Testi --- */
@@ -132,7 +132,7 @@ h2 { margin-top: 5px; font-size: 1.2rem; }
     color: #333;
 }
 #crop-preview {
-    border: 2px solid #28a745;
+    border: 2px solid #a72828;
     max-width: 100%;
     background: #fff;
 }
