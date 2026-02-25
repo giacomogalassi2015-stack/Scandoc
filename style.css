@@ -51,7 +51,7 @@ h2 { margin-top: 5px; font-size: 1.2rem; }
     position: absolute;
     width: 18px;
     height: 18px;
-    border-color: #00ff80;
+    border-color: #ff0000;
     border-style: solid;
 }
 #mirino::before { top: -2px;    left: -2px;  border-width: 3px 0 0 3px; }
