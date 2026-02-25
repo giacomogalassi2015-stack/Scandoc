@@ -24,7 +24,6 @@ const MIN_W = 80, MIN_H = 40;
 function initMirino() {
     const cw = container.clientWidth;
     const ch = container.clientHeight;
-    // Evita errori se il contenitore non ha ancora dimensioni
     if (cw === 0 || ch === 0) return;
 
     const w  = Math.round(cw * 0.8);
@@ -76,7 +75,6 @@ function onTouchStart(e) {
     const t = e.touches[0];
     const pos = e.target.dataset.pos;
 
-    // Inizia un'azione se il target è il mirino o una maniglia
     if (e.target === mirino || e.target.classList.contains('mirino-handle')) {
         e.preventDefault();
         action = {
@@ -122,7 +120,6 @@ mirino.addEventListener('touchstart', onTouchStart, { passive: false });
 mirino.addEventListener('touchmove',  onTouchMove,  { passive: false });
 mirino.addEventListener('touchend',   onTouchEnd);
 
-// Event listener di riserva per desktop (mouse)
 mirino.addEventListener('mousedown', e => {
     if (e.target === mirino || e.target.classList.contains('mirino-handle')) {
         e.preventDefault();
@@ -150,18 +147,14 @@ document.addEventListener('mousemove', e => {
 document.addEventListener('mouseup', () => { action = null; });
 
 // =====================================================================
-// RESIZE / ROTAZIONE SCHERMO — approccio robusto per mobile
+// RESIZE / ROTAZIONE SCHERMO
 // =====================================================================
 let resizeTimer = null;
 
 function safeInitMirino() {
-    // Annulla un eventuale ricalcolo già schedulato
     if (resizeTimer !== null) {
         clearTimeout(resizeTimer);
     }
-    // 150ms lasciano al browser il tempo di aggiornare il viewport,
-    // poi il doppio rAF garantisce che il paint sia avvenuto
-    // prima della lettura di clientWidth/clientHeight.
     resizeTimer = setTimeout(() => {
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
@@ -173,8 +166,6 @@ function safeInitMirino() {
 }
 
 window.addEventListener('resize', safeInitMirino);
-// orientationchange è deprecato ma ancora emesso da Safari/iOS:
-// gestirlo esplicitamente raddoppia la copertura senza costi aggiuntivi.
 window.addEventListener('orientationchange', safeInitMirino);
 
 // =====================================================================
@@ -241,7 +232,6 @@ startBtn.addEventListener('click', async () => {
         startBtn.style.display = 'none';
         scanBtn.style.display = 'block';
 
-        // Inizializza il mirino dopo che il video ha caricato i metadati
         video.onloadedmetadata = () => {
             initMirino();
         };
@@ -253,8 +243,46 @@ startBtn.addEventListener('click', async () => {
 });
 
 // =====================================================================
-// 3. SCATTO E CROP — con controlli di sicurezza e diagnostica estesa
+// 3. SCATTO E CROP — con calcolo corretto per object-fit: cover
 // =====================================================================
+
+/**
+ * Calcola la geometria reale del video renderizzato dal browser
+ * tenendo conto di object-fit: cover.
+ *
+ * Con cover il browser scala il video al valore MAGGIORE tra
+ * scaleX = displayW / videoW  e  scaleY = displayH / videoH,
+ * poi centra il risultato. I pixel in eccesso vengono tagliati.
+ *
+ * Restituisce { scale, offsetX, offsetY } dove:
+ *   scale   = px-schermo per px-sorgente
+ *   offsetX = pixel sorgente tagliati a sinistra
+ *   offsetY = pixel sorgente tagliati in alto
+ */
+function getCoverGeometry() {
+    const displayW = video.clientWidth;
+    const displayH = video.clientHeight;
+    const srcW     = video.videoWidth;
+    const srcH     = video.videoHeight;
+
+    // Scala applicata da object-fit: cover
+    const scale = Math.max(displayW / srcW, displayH / srcH);
+
+    // Dimensioni del video scalato (in px schermo)
+    const scaledW = srcW * scale;
+    const scaledH = srcH * scale;
+
+    // Offset in px schermo (quanto sporge oltre il contenitore)
+    const overshootX = (scaledW - displayW) / 2;
+    const overshootY = (scaledH - displayH) / 2;
+
+    // Offset in px sorgente (quanto è stato tagliato)
+    const offsetX = overshootX / scale;
+    const offsetY = overshootY / scale;
+
+    return { scale, offsetX, offsetY };
+}
+
 scanBtn.addEventListener('click', async () => {
     scanBtn.disabled = true;
     statusDiv.textContent = "Invio sicuro a Google Vision in corso...";
@@ -262,24 +290,30 @@ scanBtn.addEventListener('click', async () => {
     previewContainer.style.display = "none";
 
     try {
-        // Sanity check: il video deve avere dimensioni valide
         if (!video.videoWidth || !video.videoHeight || !video.clientWidth || !video.clientHeight) {
             throw new Error('Video non ancora pronto. Riprova tra un momento.');
         }
 
-        const videoRatioX = video.videoWidth  / video.clientWidth;
-        const videoRatioY = video.videoHeight / video.clientHeight;
+        // --- Geometria corretta per object-fit: cover ---
+        const { scale, offsetX, offsetY } = getCoverGeometry();
 
         const rect = getRect();
         const PADDING = 10;
 
-        // Coordinate di crop mappate al video reale, con clamp esplicito
-        // Math.max(1, ...) impedisce valori nulli o negativi che mandano in crash drawImage
-        const cropX = Math.max(0, Math.floor(rect.x * videoRatioX - PADDING));
-        const cropY = Math.max(0, Math.floor(rect.y * videoRatioY - PADDING));
-        const cropW = Math.max(1, Math.min(video.videoWidth  - cropX, Math.floor(rect.w * videoRatioX + PADDING * 2)));
-        const cropH = Math.max(1, Math.min(video.videoHeight - cropY, Math.floor(rect.h * videoRatioY + PADDING * 2)));
+        // Converti le coordinate dello schermo in coordinate sorgente:
+        //   px_sorgente = px_schermo / scale + offset_sorgente
+        const cropX = Math.max(0, Math.floor(rect.x / scale + offsetX - PADDING));
+        const cropY = Math.max(0, Math.floor(rect.y / scale + offsetY - PADDING));
+        const cropW = Math.max(1, Math.min(
+            video.videoWidth  - cropX,
+            Math.floor(rect.w / scale + PADDING * 2)
+        ));
+        const cropH = Math.max(1, Math.min(
+            video.videoHeight - cropY,
+            Math.floor(rect.h / scale + PADDING * 2)
+        ));
 
+        console.log('[COVER GEOMETRY]', { scale, offsetX, offsetY });
         console.log('[CROP]', { cropX, cropY, cropW, cropH, videoW: video.videoWidth, videoH: video.videoHeight });
 
         // Disegna il fotogramma completo sul canvas di servizio
@@ -296,7 +330,6 @@ scanBtn.addEventListener('click', async () => {
 
         const base64Image = cropCanvas.toDataURL('image/jpeg', 0.9);
 
-        // --- FETCH con diagnostica estesa ---
         let response;
         try {
             response = await fetch(WORKER_URL, {
@@ -305,7 +338,6 @@ scanBtn.addEventListener('click', async () => {
                 body: JSON.stringify({ image: base64Image })
             });
         } catch (fetchErr) {
-            // Errore di rete puro (offline, CORS preflight fallito, timeout, ecc.)
             const detail = `Errore di rete [${fetchErr.name}]: ${fetchErr.message}`;
             console.error('[FETCH ERROR]', fetchErr);
             throw new Error(detail);
@@ -353,7 +385,6 @@ scanBtn.addEventListener('click', async () => {
         statusDiv.textContent = "Scansione completata!";
 
     } catch (err) {
-        // Mostra l'errore esatto all'utente E in console
         const msg = `Errore [${err.name ?? 'Error'}]: ${err.message}`;
         statusDiv.textContent = msg;
         console.error('[SCAN ERROR]', err);
