@@ -3,35 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#28a745">
-    <meta name="description" content="Scanner MRTD per la lettura della banda MRZ tramite Google Cloud Vision.">
-    <title>Scanner ICAO - Cloud Vision</title>
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="description" content="Registrazione Alloggiati - Scanner MRTD con Google Cloud Vision.">
+    <title>Registrazione Alloggiati</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h2>Scanner MRTD Pro</h2>
-    <p class="help-text">Gira il telefono in orizzontale e inquadra la banda in basso.</p>
+    <header>
+        <div class="header-badge">MRTD</div>
+        <div class="header-text">
+            <h1>Registrazione Alloggiati</h1>
+            <p class="header-sub">Sistema di lettura documenti ICAO</p>
+        </div>
+    </header>
 
-    <div id="video-container">
-        <video id="video" autoplay playsinline muted></video>
-        <div id="mirino"></div>
-    </div>
+    <!-- ===================== SELEZIONE MODALITÀ ===================== -->
+    <section id="mode-selection">
+        <p class="section-label">Seleziona tipo documento</p>
+        <div class="mode-grid">
+            <button class="mode-card" id="btn-passport" data-mode="passport">
+                <span class="mode-icon">🛂</span>
+                <span class="mode-title">Passaporto</span>
+                <span class="mode-desc">MRZ 2 righe × 44 car.</span>
+            </button>
+            <button class="mode-card" id="btn-cie" data-mode="cie">
+                <span class="mode-icon">🪪</span>
+                <span class="mode-title">Carta d'Identità</span>
+                <span class="mode-desc">CIE — MRZ 3 righe × 30 car.</span>
+            </button>
+            <button class="mode-card" id="btn-manual" data-mode="manual">
+                <span class="mode-icon">✏️</span>
+                <span class="mode-title">Inserimento Manuale</span>
+                <span class="mode-desc">Compila il form direttamente</span>
+            </button>
+        </div>
+    </section>
 
-    <!-- Canvas di servizio (invisibile) usato per il crop interno -->
-    <canvas id="canvas" style="display:none;"></canvas>
+    <!-- ===================== SEZIONE FOTOCAMERA ===================== -->
+    <section id="camera-section" style="display:none;">
+        <div class="section-header">
+            <span id="camera-mode-label" class="section-label">Modalità: —</span>
+            <button class="btn-link" id="btn-change-mode">← Cambia modalità</button>
+        </div>
+        <p class="help-text">Gira il telefono in orizzontale e inquadra la banda MRZ.</p>
 
-    <button id="start-button" class="btn">1. Accendi Fotocamera</button>
-    <button id="scan-button" class="btn btn-success" style="display:none;">2. Scatta e Leggi</button>
+        <div id="video-container">
+            <video id="video" autoplay playsinline muted></video>
+            <div id="mirino"></div>
+        </div>
 
-    <div id="status">In attesa...</div>
+        <canvas id="canvas" style="display:none;"></canvas>
 
-    <div id="preview-container">
-        <p>Anteprima Inviata:</p>
-        <canvas id="crop-preview"></canvas>
-    </div>
+        <button id="start-button" class="btn btn-primary">▶ Accendi Fotocamera</button>
+        <button id="scan-button" class="btn btn-scan" style="display:none;">📷 Scatta e Leggi MRZ</button>
 
-    <div id="result"></div>
+        <div id="status" class="status-box">In attesa...</div>
+
+        <div id="preview-container">
+            <p>Anteprima inviata a Google Vision:</p>
+            <canvas id="crop-preview"></canvas>
+        </div>
+
+        <div id="result"></div>
+    </section>
+
+    <!-- ===================== FORM REGISTRAZIONE ===================== -->
+    <section id="form-section" style="display:none;">
+        <div class="section-header">
+            <span class="section-label">Dati Ospite</span>
+            <button class="btn-link" id="btn-back-from-form">← Indietro</button>
+        </div>
+
+        <div class="form-grid" id="registration-form">
+
+            <div class="form-row form-row-2">
+                <div class="form-group">
+                    <label for="f-cognome">Cognome *</label>
+                    <input type="text" id="f-cognome" placeholder="ROSSI" autocomplete="family-name">
+                </div>
+                <div class="form-group">
+                    <label for="f-nome">Nome *</label>
+                    <input type="text" id="f-nome" placeholder="MARIO" autocomplete="given-name">
+                </div>
+            </div>
+
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="f-sesso">Sesso *</label>
+                    <select id="f-sesso">
+                        <option value="">—</option>
+                        <option value="M">M</option>
+                        <option value="F">F</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="f-nascita">Data di Nascita *</label>
+                    <input type="date" id="f-nascita">
+                </div>
+                <div class="form-group">
+                    <label for="f-cittadinanza">Cittadinanza *</label>
+                    <input type="text" id="f-cittadinanza" placeholder="ITA" maxlength="3">
+                </div>
+            </div>
+
+            <div class="form-row form-row-2">
+                <div class="form-group">
+                    <label for="f-comune-nascita">Comune di Nascita *</label>
+                    <input type="text" id="f-comune-nascita" placeholder="Roma">
+                </div>
+                <div class="form-group">
+                    <label for="f-tipo-doc">Tipo Documento *</label>
+                    <select id="f-tipo-doc">
+                        <option value="">—</option>
+                        <option value="P">Passaporto (P)</option>
+                        <option value="I">Carta d'Identità (I)</option>
+                        <option value="V">Visto (V)</option>
+                        <option value="A">Altro (A)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row form-row-2">
+                <div class="form-group">
+                    <label for="f-num-doc">Numero Documento *</label>
+                    <input type="text" id="f-num-doc" placeholder="AA1234567" class="mono">
+                </div>
+                <div class="form-group">
+                    <label for="f-luogo-rilascio">Luogo di Rilascio</label>
+                    <input type="text" id="f-luogo-rilascio" placeholder="Roma">
+                </div>
+            </div>
+
+            <div class="form-row form-row-2">
+                <div class="form-group">
+                    <label for="f-arrivo">Data di Arrivo *</label>
+                    <input type="date" id="f-arrivo">
+                </div>
+                <div class="form-group">
+                    <label for="f-permanenza">Giorni di Permanenza *</label>
+                    <input type="number" id="f-permanenza" min="1" max="365" value="1">
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="btn-clear-form">🗑 Svuota</button>
+                <button class="btn btn-primary" id="btn-save-form">💾 Salva Registrazione</button>
+            </div>
+
+        </div>
+
+        <!-- MRZ Debug (collassabile) -->
+        <div id="mrz-debug-container" style="display:none;">
+            <button class="btn-link toggle-debug" id="toggle-debug">▼ Mostra dettagli MRZ</button>
+            <div id="mrz-debug" style="display:none;"></div>
+        </div>
+    </section>
 
     <script src="lettore_generale.js"></script>
 </body>

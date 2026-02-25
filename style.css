@@ -1,150 +1,468 @@
-*, *::before, *::after { box-sizing: border-box; }
+/* =====================================================================
+   REGISTRAZIONE ALLOGGIATI — Style
+   Aesthetic: Industrial / Utilitarian — dark navy + amber accents
+   ===================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg:        #0d0f1a;
+    --surface:   #161826;
+    --surface2:  #1e2135;
+    --border:    #2e3352;
+    --accent:    #f5a623;
+    --accent2:   #e05c5c;
+    --green:     #3ecf8e;
+    --text:      #dde2f0;
+    --text-muted:#7a82a6;
+    --font-body: 'Outfit', sans-serif;
+    --font-mono: 'Share Tech Mono', monospace;
+    --radius:    6px;
+}
+
+html { font-size: 16px; }
 
 body {
-    font-family: Arial, sans-serif;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 40px 0;
+    overflow-x: hidden;
+    background-image:
+        radial-gradient(ellipse 80% 40% at 50% -10%, rgba(245,166,35,0.08) 0%, transparent 70%);
+}
+
+/* =====================================================================
+   HEADER
+   ===================================================================== */
+header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+}
+
+.header-badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    background: var(--accent);
+    color: #000;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+header h1 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+}
+
+.header-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+}
+
+/* =====================================================================
+   SECTIONS
+   ===================================================================== */
+section {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 20px 16px 0;
+}
+
+.section-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.help-text {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 8px 0 12px;
+}
+
+/* =====================================================================
+   MODE GRID
+   ===================================================================== */
+#mode-selection { padding-top: 28px; }
+
+#mode-selection .section-label { margin-bottom: 14px; display: block; }
+
+.mode-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 480px) {
+    .mode-grid { grid-template-columns: 1fr; }
+}
+
+.mode-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    background-color: #f0f2f5;
-    padding: 10px;
-    margin: 0;
-    overflow-x: hidden; /* permette alle maniglie del mirino di uscire senza scrollbar */
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color 0.18s, background 0.18s, transform 0.12s;
+    color: var(--text);
+    font-family: var(--font-body);
+    text-align: center;
 }
 
-h2 { margin-top: 5px; font-size: 1.2rem; }
+.mode-card:hover, .mode-card:focus-visible {
+    border-color: var(--accent);
+    background: var(--surface2);
+    transform: translateY(-2px);
+    outline: none;
+}
 
-/* --- Video container --- */
+.mode-card:active { transform: translateY(0); }
+
+.mode-icon  { font-size: 2rem; line-height: 1; }
+.mode-title { font-weight: 700; font-size: 0.95rem; }
+.mode-desc  { font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono); }
+
+/* =====================================================================
+   VIDEO + MIRINO
+   ===================================================================== */
 #video-container {
     position: relative;
     width: 100%;
-    max-width: 640px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    border-radius: var(--radius);
     background: #000;
-    /* niente padding: il mirino deve riferirsi esattamente all'area video */
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 
 #video {
     width: 100%;
     display: block;
     object-fit: cover;
-    border-radius: 8px;
+    border-radius: var(--radius);
+    min-height: 180px;
 }
 
-/* --- Mirino --- */
+/* Mirino */
 #mirino {
     position: absolute;
-    border: 2px solid rgba(0, 255, 128, 0.9);
+    border: 1.5px solid rgba(245,166,35,0.9);
     box-sizing: border-box;
     cursor: move;
     touch-action: none;
     box-shadow:
-        0 0 0 2px rgba(0, 255, 128, 0.4),
-        0 0 0 100vmax rgba(0, 0, 0, 0.45);
-    border-radius: 4px;
+        0 0 0 2px rgba(245,166,35,0.3),
+        0 0 0 100vmax rgba(0, 0, 0, 0.5);
+    border-radius: 2px;
 }
 
-/* Angolini decorativi */
-#mirino::before,
-#mirino::after {
+#mirino::before, #mirino::after {
     content: '';
     position: absolute;
     width: 18px;
     height: 18px;
-    border-color: #ff0000;
+    border-color: var(--accent2);
     border-style: solid;
 }
 #mirino::before { top: -2px;    left: -2px;  border-width: 3px 0 0 3px; }
 #mirino::after  { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; }
 
-/* --- Maniglie di ridimensionamento --- */
 .mirino-handle {
     position: absolute;
-    width: 22px;
-    height: 22px;
-    background: rgba(0, 255, 128, 0.85);
-    border: 2px solid #fff;
+    width: 20px;
+    height: 20px;
+    background: var(--accent);
+    border: 2px solid #000;
     border-radius: 50%;
     touch-action: none;
     z-index: 10;
 }
 
-/* Area di tocco estesa a ~44px senza modificare il visual */
 .mirino-handle::after {
     content: '';
     position: absolute;
     inset: -12px;
 }
 
-.mirino-handle[data-pos="nw"] { top: -11px;             left: -11px;            cursor: nw-resize; }
-.mirino-handle[data-pos="ne"] { top: -11px;             right: -11px;           cursor: ne-resize; }
-.mirino-handle[data-pos="sw"] { bottom: -11px;          left: -11px;            cursor: sw-resize; }
-.mirino-handle[data-pos="se"] { bottom: -11px;          right: -11px;           cursor: se-resize; }
-.mirino-handle[data-pos="n"]  { top: -11px;             left: calc(50% - 11px); cursor: n-resize;  }
-.mirino-handle[data-pos="s"]  { bottom: -11px;          left: calc(50% - 11px); cursor: s-resize;  }
-.mirino-handle[data-pos="w"]  { top: calc(50% - 11px);  left: -11px;            cursor: w-resize;  }
-.mirino-handle[data-pos="e"]  { top: calc(50% - 11px);  right: -11px;           cursor: e-resize;  }
+.mirino-handle[data-pos="nw"] { top:-10px;  left:-10px;               cursor:nw-resize; }
+.mirino-handle[data-pos="ne"] { top:-10px;  right:-10px;              cursor:ne-resize; }
+.mirino-handle[data-pos="sw"] { bottom:-10px; left:-10px;             cursor:sw-resize; }
+.mirino-handle[data-pos="se"] { bottom:-10px; right:-10px;            cursor:se-resize; }
+.mirino-handle[data-pos="n"]  { top:-10px;  left:calc(50% - 10px);    cursor:n-resize;  }
+.mirino-handle[data-pos="s"]  { bottom:-10px; left:calc(50% - 10px);  cursor:s-resize;  }
+.mirino-handle[data-pos="w"]  { top:calc(50% - 10px); left:-10px;     cursor:w-resize;  }
+.mirino-handle[data-pos="e"]  { top:calc(50% - 10px); right:-10px;    cursor:e-resize;  }
 
-/* --- Bottoni --- */
+/* =====================================================================
+   BUTTONS
+   ===================================================================== */
 .btn {
-    margin-top: 15px;
-    padding: 15px 25px;
-    font-size: 16px;
-    font-weight: bold;
-    color: white;
-    background-color: #007bff;
+    display: block;
+    margin-top: 12px;
+    padding: 14px 20px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-family: var(--font-body);
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius);
     cursor: pointer;
-    width: 90%;
-    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.03em;
 }
-.btn-success  { background-color: #a72828; }
-.btn:disabled { background-color: #ccc; cursor: not-allowed; }
 
-/* --- Testi --- */
-#status {
-    margin-top: 15px;
-    font-weight: bold;
-    color: #333;
-    text-align: center;
-    padding: 0 10px;
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-primary   { background: var(--accent);  color: #000; }
+.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-scan      { background: var(--accent2); color: #fff; }
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-family: var(--font-body);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
-.help-text {
-    font-size: 0.9rem;
-    color: #555;
+.btn-link:hover { color: #fff; }
+
+/* =====================================================================
+   STATUS BOX
+   ===================================================================== */
+.status-box {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border-left: 3px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    word-break: break-word;
+}
+
+/* =====================================================================
+   PREVIEW
+   ===================================================================== */
+#preview-container {
+    display: none;
     text-align: center;
+    margin-top: 14px;
+    width: 100%;
+}
+#preview-container p {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    margin-bottom: 6px;
+    text-align: left;
+}
+#crop-preview {
+    border: 1px solid var(--accent);
+    max-width: 100%;
+    background: #000;
+    border-radius: 4px;
+}
+
+/* =====================================================================
+   MRZ RESULT DEBUG
+   ===================================================================== */
+#result {
+    display: none;
+    margin-top: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+}
+
+#result h3 {
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
     margin-bottom: 10px;
 }
 
-/* --- Anteprima crop --- */
-#preview-container {
-    display: none; /* mostrato via JS dopo la scansione */
-    text-align: center;
-    margin-top: 15px;
-    width: 100%;
-    max-width: 640px;
-}
-#preview-container p {
-    margin: 0 0 5px 0;
-    font-size: 12px;
-    font-weight: bold;
-    color: #333;
-}
-#crop-preview {
-    border: 2px solid #b3ff00;
-    max-width: 100%;
-    background: #fff;
+#result h4 {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    margin: 12px 0 6px;
 }
 
-/* --- Box risultato MRZ --- */
-#result {
-    display: none; /* mostrato via JS dopo la scansione */
-    margin-top: 15px;
+.mrz-row {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    padding: 8px 10px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    border-left: 3px solid;
+    word-break: break-all;
+    background: var(--surface2);
+}
+.mrz-row.ok     { border-color: var(--green); }
+.mrz-row.warn   { border-color: var(--accent); }
+.mrz-row-status { font-size: 0.68rem; color: var(--text-muted); margin-top: 3px; }
+
+/* =====================================================================
+   REGISTRATION FORM
+   ===================================================================== */
+#form-section { padding-top: 20px; }
+
+.form-grid { display: flex; flex-direction: column; gap: 12px; }
+
+.form-row {
+    display: grid;
+    gap: 12px;
+}
+.form-row-2 { grid-template-columns: 1fr 1fr; }
+.form-row-3 { grid-template-columns: 80px 1fr 80px; }
+
+@media (max-width: 420px) {
+    .form-row-2 { grid-template-columns: 1fr; }
+    .form-row-3 { grid-template-columns: 1fr 1fr; }
+    .form-row-3 .form-group:last-child { grid-column: 1 / -1; }
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group label {
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.form-group input,
+.form-group select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    transition: border-color 0.15s;
     width: 100%;
-    max-width: 640px;
-    background: white;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(245,166,35,0.15);
+}
+
+.form-group input.mono,
+.form-group input[id="f-num-doc"] {
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+}
+
+.form-group input.autofilled {
+    border-color: var(--green);
+    background: rgba(62,207,142,0.06);
+}
+
+.form-actions {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+/* =====================================================================
+   MRZ DEBUG COLLAPSIBLE
+   ===================================================================== */
+#mrz-debug-container {
+    margin-top: 16px;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+}
+
+.toggle-debug {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted) !important;
+    text-decoration: none !important;
+}
+
+#mrz-debug {
+    margin-top: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* =====================================================================
+   TOAST
+   ===================================================================== */
+#toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-size: 0.85rem;
+    font-family: var(--font-mono);
+    color: var(--text);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 9999;
+    white-space: nowrap;
+    max-width: 90vw;
+}
+#toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
